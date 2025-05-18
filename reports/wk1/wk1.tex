@@ -1,4 +1,3 @@
-
 \documentclass{article} % For LaTeX2e
 \usepackage[final]{../colm2025_conference}
 
@@ -43,7 +42,7 @@
 
 \begin{abstract}
 This document provides an introduction into Reinforcement Learning by contrast with Supervised Learning. 
-We discuss some formal underpinnings of RL, including the Markov Decision Process framework
+We discuss some formal underpinnings of RL, including the Markov Decision Process framework.
 We explore how RL appears in the real world, and how it can be used to solve problems.
 Lastly, we provide a mathematical formulation of the RL objective.
 \end{abstract}
@@ -64,7 +63,7 @@ on a multitude of factors, including the current state of the environment,
 the dynamics of the environment, past actions, and the agent's objective.
 We call problems like these \textit{sequential decision making problems} (SDMPs).
 
-\section{Sequential Decision Making \& Markov Decision Process (MDP)}
+\section{Sequential Decision Making \& Markov Decision Process (MDP)} \label{sdmp_notation}
 The notation in this section is synthesized from \cite{SpinningUp-2018}, \cite{Levine-et-al-2023}, and \cite{Sutton-and-Barto-1998}.
 
 \subsection{Sequential Decision Making Problems (SDMPs)}
@@ -91,14 +90,15 @@ The agent receives a reward $r_t$ at each time step $t$ based on the current sta
 
 \subsection{Markov Decision Process (MDP)}
 A Markov Decision Process (MDP) is a special case of SDMPs, where the transition function satisfies
-a nice property known as the \textit{Markov property} \cite{Sutton-and-Barto-1998}:
+a nice property known as the \textit{Markov property} (\cite{Sutton-and-Barto-1998}):
 \begin{equation} \label{markov_property}
     s_{t+1} \sim \tau(s_t, a_t, d_t) = \tau(s_t, a_t)
 \end{equation}
 Informally, this means that the next state $s_{t+1}$ depends only on the current state $s_t$ and action $a_t$, and not on any previous states or actions.
 
-This simplification allows us to reduce the solution space of the problem, and is a key assumption in many RL algorithms.
-We can also rewrite the reward function as $r_t = r(s_t, a_t, s_{t + 1})$, since the next state is not needed to compute the reward.
+This simplification allows us to reduce the solution space of the problem, and is a key assumption in many RL algorithms (\cite{Sutton-and-Barto-1998}).
+We can also rewrite the reward function as $r_t = r(s_t, a_t, s_{t + 1})$, 
+since we assume that $d_t$ no longer exists. (we have fully captured the environment dynamics.)
 
 \section{Contrasting Supervised Learning (SL) and Reinforcement Learning (RL)}
 \subsection{Supervised Learning (SL)}
@@ -119,7 +119,7 @@ In the next subsection, we discuss how SL is used to learn decision-making polic
 
 \subsection{Imitation Learning (IL)}
 
-As an extension of SL, IL\footnote{There does not seem to be consensus on the definition of IL, despite that implied by \cite{Levine-et-al-2023}. For example, \cite{underactuated-2023} seems to name this process \textit{Behavioral Cloning}, a \textit{type} of IL.} 
+As an extension of SL, IL\footnote{There does not seem to be consensus on the definition of IL, despite that implied by \cite{Levine-et-al-2023}. For example, \cite{Underactuated-2023} seems to name this process \textit{Behavioral Cloning}, a \textit{type} of IL.} 
 learns a policy $\pi_\theta$ by trying to \textit{imitate} expert demonstrations.
 
 Writing the problem formally to contrast with SL,
@@ -141,15 +141,54 @@ nor the reward function, but only on the expert demonstrations.
 In contrast to IL, RL learns by directly interacting with the environment,
 in order to directly maximize the expected cumulative reward signal (\cite{Sutton-and-Barto-1998}).
 
-Broadly speaking, the agent will use its policy to explore the environment,
-and adjust the policy from the rewards it receives.
+Broadly speaking, the agent will use its policy to explore the environment (i.e. collect \textit{rollouts}),
+and adjust the policy from the rewards it receives. It does \textit{not} simply ape the expert demonstrations.
 
+This process can appear quite contrived and abstract. We illustrate with the following example:
+
+\subsection{Reinforcement Learning Example}
+Consider this environment due to \cite{Towers-et-al-2024}:
+\begin{quote}
+    A car is driving on a race track and needs to get to the finish point
+    as fast as possible. The car can accelerate, brake, or turn left/right.
+\end{quote}
+
+\begin{table}[t]
+   \begin{center}
+   \begin{tabular}{ll}
+   \toprule
+   \multicolumn{1}{c}{\bf Symbol}  &\multicolumn{1}{c}{\bf Description} \\
+   \midrule
+   $S$ & $96 \times 96 \times 3$ RGB Image depicting a God's eye view of the racetrack and car. \\
+   $A$ & An integer $0 \leq a \leq 4$, respectively denoting: \\ 
+   & (1) Do Nothing, (2) Steer Left, (3) Steer Right, (4) Gas, (5) Break \\
+   $r(s_t, a_t)$ & $\left\{\begin{array}{rl}
+   -0.1 + 1000/N & \text{if the car visits new tile, where N is total tiles.} \\
+   -100 & \text{if the car veers too far from track} \\
+   -0.1 & \text{otherwise} \\
+   \end{array}
+   \right.$  \\
+   $\tau$ & Based on the actions described above, the car's position is updated. \\
+   & The car's position and velocity are updated by a fixed amount. \\
+   \bottomrule
+   \end{tabular}
+   \end{center}
+   \caption{Gymnasium's (Discrete) Car Racing Environment (\cite{Towers-et-al-2024}).}\label{car_racing}
+\end{table}
+
+\ref{car_racing} provides a description of the environment in more detail.
+
+Owing to the absence of outside factors such as other cars, the weather, etc.,
+the fact that any environment dynamics not observed by the agent are held constant,
+as well as the fact that the car's position and velocity are dependent on the car's previous position and velocity,
+such a model of the race track is \textit{Markovian}, and this problem can be solved using RL.
+   
 \subsection{The RL Objective} \label{rl_obj}
 
 (Note that $\pi$ can either be deterministic (hence $a_t = \pi(s_t)$), or stochastic (hence $a_t \sim \pi(\cdot | s_t)$).
-For convenience, we will assume $\pi$ is stochastic throughout this document.)
+For convenience, we will assume $\pi$ is stochastic in this section.)
 
-The ultimate objective of an RL agent is to learn a policy $\pi$ which maximizes the expected cumulative reward over time. Put formally,
+Reusing notation developed in Section \ref{sdmp_notation}, the ultimate objective of an RL agent is to learn a policy $\pi$ which maximizes the expected cumulative reward over time. Put formally,
 \begin{equation} \label{sdmp_obj}
       \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r_t(s_t, a_t, s_{t+1}, d_t) \right]
 \end{equation}
@@ -166,11 +205,21 @@ we have the objective as:
    \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t) \right]
 \end{equation}
 
+Though this objective is arguably an over-simplification of the RL problem,
+it is a good algorithm-agnostic starting point for understanding RL.
+
+\section{Conclusion}
+
+In this report, we discussed the MDP framework as a special case of SDMPs which are friendlier to optimize for.
+By contrasting RL with SL, we highlighted what sets RL apart from typical Machine Learning problems.
+
+It is hoped that this report serves as a good foundation for similar, future reports.
+
 \bibliographystyle{../colm2025_conference}
 \bibliography{wk1}
 
-% \appendix
-% \section{Appendix}
-% You may include other additional sections here.
+\appendix
+\section{Appendix}
+You may include other additional sections here.
 
 \end{document}
