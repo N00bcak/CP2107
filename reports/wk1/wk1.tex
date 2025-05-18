@@ -194,7 +194,7 @@ Reusing notation developed in Section \ref{sdmp_notation}, the ultimate objectiv
 \end{equation}
 where $\underset{T \sim \pi}{\mathbb{E}}$ is the expectation over all possible trajectories $T$ sampled from the policy $\pi$.
 
-Finally, our agent's ultimate objective is now:
+Specifically in an MDP, we can ignore $d_t$, and so our agent's ultimate objective is instead:
 \begin{equation} \label{mdp_obj}
     \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t, s_{t + 1}) \right]
 \end{equation}
