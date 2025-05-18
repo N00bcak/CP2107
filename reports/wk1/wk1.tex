@@ -176,7 +176,7 @@ Consider this environment due to \cite{Towers-et-al-2024}:
    \caption{Gymnasium's (Discrete) Car Racing Environment (\cite{Towers-et-al-2024}).}\label{car_racing}
 \end{table}
 
-\ref{car_racing} provides a description of the environment in more detail.
+Table \ref{car_racing} provides a description of the environment in more detail.
 
 Owing to the absence of outside factors such as other cars, the weather, etc.,
 the fact that any environment dynamics not observed by the agent are held constant,
@@ -196,7 +196,7 @@ where $\underset{T \sim \pi}{\mathbb{E}}$ is the expectation over all possible t
 
 Finally, our agent's ultimate objective is now:
 \begin{equation} \label{mdp_obj}
-    \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r_t \right] = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t, s_{t + 1}) \right]
+    \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t, s_{t + 1}) \right]
 \end{equation}
 
 If we further define $r(s_t, a_t) = \mathbb{E}_{s_{t + 1} \sim \tau(s_t, a_t)}[r(s_t, a_t, s_{t + 1})]$, 
