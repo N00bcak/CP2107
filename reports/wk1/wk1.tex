@@ -1,0 +1,176 @@
+
+\documentclass{article} % For LaTeX2e
+\usepackage[final]{../colm2025_conference}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\usepackage{lineno}
+
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+
+\title{Week 1: Reinforcement Learning Preliminaries}
+
+% Authors must not appear in the submitted version. They should be hidden
+% as long as the \colmfinalcopy macro remains commented out below.
+% Non-anonymous submissions will be rejected without review.
+
+\author{\textbf{BEH} Chuen Yang}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\begin{document}
+
+\ifcolmsubmission
+\linenumbers
+\fi
+
+\maketitle
+
+\begin{abstract}
+This document provides an introduction into Reinforcement Learning by contrast with Supervised Learning. 
+We discuss some formal underpinnings of RL, including the Markov Decision Process framework
+We explore how RL appears in the real world, and how it can be used to solve problems.
+Lastly, we provide a mathematical formulation of the RL objective.
+\end{abstract}
+% What is Markov Decision Process, what are the terms and their meaning?
+% How reinforcement learning differs from supervised learning (imitation learning)? Please elaborate, possibly with terms and math notations.
+% Think of a real-world case and use the terms in reinforcement learning to describe it.
+% Write the objective of RL in math.
+
+\section{Introduction}
+Many real-world problems require an \textit{agent} to make a sequence of 
+\textit{actions/decisions} over \textit{time} in an \textit{environment} 
+in order to achieve a certain \textit{goal}.
+For example, a robot may need to navigate a maze (\cite{Muller-2023}), 
+or an air-conditioner must cool a room down to a certain temperature.
+
+In these situations, the "most appropriate" action/decision at each time step depends
+on a multitude of factors, including the current state of the environment,
+the dynamics of the environment, past actions, and the agent's objective.
+We call problems like these \textit{sequential decision making problems} (SDMPs).
+
+\section{Sequential Decision Making \& Markov Decision Process (MDP)}
+The notation in this section is synthesized from \cite{SpinningUp-2018}, \cite{Levine-et-al-2023}, and \cite{Sutton-and-Barto-1998}.
+
+\subsection{Sequential Decision Making Problems (SDMPs)}
+
+Generally speaking, for a given \textit{environment}, let $S$ be the set of all possible \textit{states}
+and $A$ be the set of all possible \textit{actions}. An agent \textit{interacts} with the environment over a given timeframe 
+$0 \leq t \leq n$ by observing the current state $s_t \in S$ and taking an action $a_t \in A$ according to a policy $\pi$.
+
+We defer the discussion of policies to Section \ref{rl_obj}.
+
+Since we may not fully understand the environment dynamics, 
+let $D$ be a placeholder set for all unobservable variables affecting the environment.
+Then, we have a \textit{transition operator} $s_{t+1} \sim \tau(s_t, a_t, d_t)$ 
+describing for current states $s_t \in S$, $a_t \in A$, and unknown $d_t \in D$,
+how the environment changes (possibly stochastically) over time.
+
+We also have a \textit{reward function} $r_t = r(s_t, a_t, s_{t + 1}, d_t)$, 
+telling the agent "how good" a particular transition is.
+
+In short, we can describe SDMPs using the tuple $(S, A, \tau, r)$ and set $D$.
+
+A set of interactions $T = \{(s_0, a_0), (s_1, a_1), \ldots, (s_n, a_n)\}$, where $s_0 \sim \rho_0$ is stochastically sampled, is called a \textit{trajectory} or \textit{episode}. 
+The agent receives a reward $r_t$ at each time step $t$ based on the current state and action taken.
+
+\subsection{Markov Decision Process (MDP)}
+A Markov Decision Process (MDP) is a special case of SDMPs, where the transition function satisfies
+a nice property known as the \textit{Markov property} \cite{Sutton-and-Barto-1998}:
+\begin{equation} \label{markov_property}
+    s_{t+1} \sim \tau(s_t, a_t, d_t) = \tau(s_t, a_t)
+\end{equation}
+Informally, this means that the next state $s_{t+1}$ depends only on the current state $s_t$ and action $a_t$, and not on any previous states or actions.
+
+This simplification allows us to reduce the solution space of the problem, and is a key assumption in many RL algorithms.
+We can also rewrite the reward function as $r_t = r(s_t, a_t, s_{t + 1})$, since the next state is not needed to compute the reward.
+
+\section{Contrasting Supervised Learning (SL) and Reinforcement Learning (RL)}
+\subsection{Supervised Learning (SL)}
+
+In SL, models are made to learn relationships between \textit{features} and \textit{labels/targets}, 
+or \textit{input} and \textit{output pairs}. (\cite{Goodfellow-et-al-2016}). 
+Formally, let $S = \{(\mathbf{x}_i, \mathbf{y}_i)\}$ be a dataset, 
+and let $f_\theta: X \to Y$ be a function that maps inputs to outputs
+where $\mathbf{x}_i \in X$ is the input and $\mathbf{y}_i \in Y$ is the output.
+For a given loss function $\mathcal{L}$, SL seeks $\theta$ 
+such that the \textbf{expected loss over} $S$ is minimized:
+\begin{equation} \label{sl_obj}
+    \theta^* = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \underset{(\mathbf{s}, \mathbf{a}) \sim S}{\mathbb{E}}[\mathcal{L}(f_\theta(\mathbf{x}), \mathbf{y})]
+\end{equation}
+where $f_\theta$ is the model parameterized by $\theta$ (\cite{Levine-et-al-2023}).
+
+In the next subsection, we discuss how SL is used to learn decision-making policies \textit{by imitation}.
+
+\subsection{Imitation Learning (IL)}
+
+As an extension of SL, IL\footnote{There does not seem to be consensus on the definition of IL, despite that implied by \cite{Levine-et-al-2023}. For example, \cite{underactuated-2023} seems to name this process \textit{Behavioral Cloning}, a \textit{type} of IL.} 
+learns a policy $\pi_\theta$ by trying to \textit{imitate} expert demonstrations.
+
+Writing the problem formally to contrast with SL,
+let $S = \{(\mathbf{s}_i, \mathbf{a}_i)\}$ be a dataset of expert demonstrations, 
+where $\mathbf{s}_i$ is the state and $\mathbf{a}_i$ is the action taken by the expert.
+Let $\pi_\theta: S \to A$ be a policy that maps states to actions, where $A$ is the action space. 
+For a given loss function $\mathcal{L}$, $\theta$ is sought \textit{analogously as in SL}
+(contrast with \ref{sl_obj}):
+
+\begin{equation} \label {il_obj}
+    \theta^* = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \underset{(\mathbf{s}, \mathbf{a}) \sim S}{\mathbb{E}}[\mathcal{L}(\pi_\theta(\mathbf{x}), \mathbf{y})]
+\end{equation}
+
+Note that the loss function $\mathcal{L}$ may depend on neither the environment dynamics,
+nor the reward function, but only on the expert demonstrations.
+
+\section{Reinforcement Learning (RL) vs SL}
+
+In contrast to IL, RL learns by directly interacting with the environment,
+in order to directly maximize the expected cumulative reward signal (\cite{Sutton-and-Barto-1998}).
+
+Broadly speaking, the agent will use its policy to explore the environment,
+and adjust the policy from the rewards it receives.
+
+\subsection{The RL Objective} \label{rl_obj}
+
+(Note that $\pi$ can either be deterministic (hence $a_t = \pi(s_t)$), or stochastic (hence $a_t \sim \pi(\cdot | s_t)$).
+For convenience, we will assume $\pi$ is stochastic throughout this document.)
+
+The ultimate objective of an RL agent is to learn a policy $\pi$ which maximizes the expected cumulative reward over time. Put formally,
+\begin{equation} \label{sdmp_obj}
+      \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r_t(s_t, a_t, s_{t+1}, d_t) \right]
+\end{equation}
+where $\underset{T \sim \pi}{\mathbb{E}}$ is the expectation over all possible trajectories $T$ sampled from the policy $\pi$.
+
+Finally, our agent's ultimate objective is now:
+\begin{equation} \label{mdp_obj}
+    \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r_t \right] = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t, s_{t + 1}) \right]
+\end{equation}
+
+If we further define $r(s_t, a_t) = \mathbb{E}_{s_{t + 1} \sim \tau(s_t, a_t)}[r(s_t, a_t, s_{t + 1})]$, 
+we have the objective as:
+\begin{equation} \label{mdp_obj_concise}
+   \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t) \right]
+\end{equation}
+
+\bibliographystyle{../colm2025_conference}
+\bibliography{wk1}
+
+% \appendix
+% \section{Appendix}
+% You may include other additional sections here.
+
+\end{document}

@@ -179,4 +179,6 @@ cython_debug/
 **/*.aux
 **/*.log
 **/*.out
+**/*.bbl
+**/*.blg
 **/*.synctex.gz
