@@ -124,7 +124,7 @@ As an extension of SL, IL\footnote{There does not seem to be consensus on the de
 learns a policy $\pi_\theta$ by trying to \textit{imitate} expert demonstrations.
 
 Writing the problem formally to contrast with SL,
-let $S = \{(\mathbf{s}_i, \mathbf{a}_i)\}$ be a dataset of expert demonstrations, 
+let \st{$S = \{(\mathbf{s}_i, \mathbf{a}_i)\}$} {\color{red} $(\mathbf{s}_i, \mathbf{a}_i) \sim S$} be a dataset of expert demonstrations, 
 where $\mathbf{s}_i$ is the state and $\mathbf{a}_i$ is the action taken by the expert.
 Let $\pi_\theta: S \to A$ be a policy that maps states to actions, where $A$ is the action space. 
 For a given loss function $\mathcal{L}$, $\theta$ is sought \textit{analogously as in SL}
