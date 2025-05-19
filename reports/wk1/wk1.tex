@@ -6,6 +6,7 @@
 \usepackage{url}
 \usepackage{amsmath}
 \usepackage{booktabs}
+\usepackage{soul}
 
 \usepackage{lineno}
 
@@ -85,7 +86,7 @@ telling the agent "how good" a particular transition is.
 
 In short, we can describe SDMPs using the tuple $(S, A, \tau, r)$ and set $D$.
 
-A set of interactions $T = \{(s_0, a_0), (s_1, a_1), \ldots, (s_n, a_n)\}$, where $s_0 \sim \rho_0$ is stochastically sampled, is called a \textit{trajectory} or \textit{episode}. 
+A \st{set} {\color{red} sequence} of interactions $T = ((s_0, a_0), (s_1, a_1), \ldots, (s_n, a_n))$, where $s_0 \sim \rho_0$ is stochastically sampled, is called a \textit{trajectory} or \textit{episode}. 
 The agent receives a reward $r_t$ at each time step $t$ based on the current state and action taken.
 
 \subsection{Markov Decision Process (MDP)}
@@ -105,7 +106,7 @@ since we assume that $d_t$ no longer exists. (we have fully captured the environ
 
 In SL, models are made to learn relationships between \textit{features} and \textit{labels/targets}, 
 or \textit{input} and \textit{output pairs}. (\cite{Goodfellow-et-al-2016}). 
-Formally, let $S = \{(\mathbf{x}_i, \mathbf{y}_i)\}$ be a dataset, 
+Formally, let \st{$S = \{(\mathbf{x}_i, \mathbf{y}_i)\}$} {\color{red} $(\mathbf{x}_i, \mathbf{y}_i) \sim S$} be a dataset, 
 and let $f_\theta: X \to Y$ be a function that maps inputs to outputs
 where $\mathbf{x}_i \in X$ is the input and $\mathbf{y}_i \in Y$ is the output.
 For a given loss function $\mathcal{L}$, SL seeks $\theta$ 
@@ -133,7 +134,12 @@ For a given loss function $\mathcal{L}$, $\theta$ is sought \textit{analogously 
     \theta^* = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \underset{(\mathbf{s}, \mathbf{a}) \sim S}{\mathbb{E}}[\mathcal{L}(\pi_\theta(\mathbf{x}), \mathbf{y})]
 \end{equation}
 
-Note that the loss function $\mathcal{L}$ may depend on neither the environment dynamics,
+Note that the loss function $\mathcal{L}$ may 
+\footnote{{\color{red} 
+    Of course, it COULD. Consider the case where an expert is a pre-trained RL model. 
+    But what we mean here is that the loss function is "closeness" to the expert's policy.
+}}
+depend on neither the environment dynamics,
 nor the reward function, but only on the expert demonstrations.
 
 \section{Reinforcement Learning (RL) vs SL}
