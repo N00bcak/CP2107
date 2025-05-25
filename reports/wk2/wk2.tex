@@ -19,7 +19,7 @@
 \hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
 
 
-\title{Week 2: Policy Gradient Methods}
+\title{Week 2: Foundations of Policy Gradient Methods}
 
 \author{\textbf{BEH} Chuen Yang}
 
@@ -36,8 +36,9 @@
 
 \begin{abstract}
 This document uses the foundations laid previously to explore Policy Gradient methods.
-We theoretically analyse REINFORCE, a simple policy gradient algorithm formalized by \cite{Williams-1992},
+We also study REINFORCE, a simple policy gradient algorithm formalized by \cite{Williams-1992},
 and discuss its use of \textit{baselines} to reduce variance in the policy gradient estimates.
+Finally, we summarise the policy gradient method by devising a simple algorithm that uses the policy gradient to optimise the policy.
 \end{abstract}
 
 \section{Recap}
@@ -69,7 +70,7 @@ and then performing gradient ascent on the objective in Equation \eqref{mdp_obj}
 
 In order to further understand how this works, we will first derive the policy gradient.
 
-Note that from here on, we assume the policy is a parameterised neural network $\theta$ of a specific architecture.
+Note that from here on, we assume the policy is a parameterised neural network $\theta$ whose architecture determines $\pi$.
 We will thus re-write the policy as $\pi_\theta$. 
 
 
@@ -154,20 +155,30 @@ where $\alpha$ is a learning rate hyperparameter.
 This completes the derivation of the \textit{basic} policy gradient \footnote{
 However, with some effort, we can simplify the above expression further.
 For brevity, we will directly reference one such \href{https://spinningup.openai.com/en/latest/spinningup/extra_pg_proof1.html}{proof here} (due to \cite{SpinningUp-2018}).
-}
-and we can \textit{theoretically} directly optimise it via Equation \eqref{policy_gradient_update}.
+}.
 
 \subsection{An Algorithm Using the Policy Gradient}
-We can now summarise the above derivation into a simple algorithm that uses the policy gradient to optimise the policy $\pi_\theta$.
+
+
+Practically, however, we usually \textit{estimate} $\nabla_\theta J(\pi_\theta)$ by sampling a batch of trajectories $T$ from the policy $\pi_\theta$ and the environment.
+This gives us the following estimation of the policy gradient, due to \cite{Sutton-and-Barto-1998} and \cite{SpinningUp-2018}:
+\begin{equation} \label{policy_gradient_estimate}
+    \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t=0}^{n} r(s_t, a_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)
+\end{equation}
+
+With that in mind, we can now summarise the above derivation into a simple algorithm that uses the policy gradient to optimise the policy $\pi_\theta$.
+
 \begin{algorithm}[H]
     \caption{Policy Gradient Algorithm}
     \label{alg:policy_gradient}
     \begin{algorithmic}[1]
+        \State Input: Policy $\pi_\theta$, learning rate $\alpha$
+        \State Output: Updated policy $\pi_\theta$
         \State Initialise policy parameters $\theta$
         \While{not converged}
-            \State Sample a batch of trajectories $T$ from the policy $\pi_\theta$
-            \State Compute the policy gradient $\nabla_\theta J(\pi_\theta)$ using Equation \eqref{policy_gradient}
-            \State Update the policy parameters using Equation \eqref{policy_gradient_update}
+            \State Sample a batch of trajectories $T$ from the policy $\pi_\theta$ and the environment
+            \State Estimate the policy gradient $\nabla_\theta J(\pi_\theta)$ using Equation \eqref{policy_gradient_estimate}
+            \State Update the policy parameters using (Equation \eqref{policy_gradient_update})
         \EndWhile
     \end{algorithmic}
 \end{algorithm}
@@ -181,9 +192,14 @@ we must do so by sampling a small number of trajectories $T$ from the policy $\p
 This means our estimate of the policy gradient $\nabla_\theta J(\pi_\theta)$ will have
 variance of unknown magnitude, which can lead to instability and slow convergence in the training process. 
 
-% (See Appendix \ref{sec:variance} for a deeper look into the policy gradient's variance.)
+One common approach is to consider only the \textit{reward-to-go} $R_t$ at each time step $t$ (\cite{SpinningUp-2018}, \cite{Levine-et-al-2023}),
+which is the sum of the rewards from time step $t$ to the end of the trajectory:
+\begin{equation} \label{reward_to_go}
+    R_t = \sum_{k=t}^{n} r(s_k, a_k)
+\end{equation}
+This is intuitively explained by \textit{causality}, since the rewards at time step $t$ depend only on the actions taken from time step $t$ onwards.
 
-A common approach to reduce the variance of the policy gradient estimate is to use a \textit{state-dependent baseline} $b(s_t)$,
+Another way to reduce the variance of the policy gradient estimate is to use a \textit{state-dependent baseline} $b(s_t)$,
 as demonstrated in \cite{SpinningUp-2018} and \cite{Williams-1992}.
 % Yes, I tried to prove it. But I was repelled by the symbol-chasing.
 \footnote{Many sources, simply assert that the policy gradient has high variance, 
@@ -194,7 +210,9 @@ However, these sources do not formally explain why. A proof is given in \cite{Wu
 
 \section{REINFORCE}
 REINFORCE is a simple policy gradient algorithm first formalized by \cite{Williams-1992} that uses the policy gradient derived above,
-but incorporates a baseline $b(s_t)$ to reduce the variance of the policy gradient estimate.
+but incorporates a baseline $b(s_t)$ to reduce the variance of the policy gradient estimate. \footnote{
+    According to \cite{Williams-1992}, any algorithm that uses a baseline is technically a REINFORCE algorithm.
+}
 
 \subsection{Baseline}
 The baseline function $b(s_t)$ can reduce the variance of the policy gradient estimate
@@ -208,7 +226,7 @@ This means that the baseline does not affect the expected value of the policy gr
 but it can reduce the variance of the estimate by centering the rewards around the baseline.
 
 This matches our intuition that a "baseline" is a reference point on which we can anchor
-our perceptions of the rewards' relative value.
+our perceptions of the rewards' relative value. 
 
 \subsection{REINFORCE Objective}
 
@@ -226,7 +244,40 @@ This helps to stabilise the training process and improve convergence from a prac
 The choice of baseline function $b(s_t)$ can vary depending on the problem and the specific implementation of REINFORCE.
 However, a common choice is to use the value function $V_\theta(s_t)$ as the baseline (\cite{SpinningUp-2018}, \cite{Sutton-and-Barto-1998}, \cite{Weng-2018}), which is an estimate of the expected return from state $s_t$ under the current policy $\pi_\theta$.
 
+This baseline is just the Bellman equation (\cite{Sutton-and-Barto-1998}), which states that the value function $V_\theta(s_t)$ is the expected return from state $s_t$ under the policy $\pi_\theta$:
+\begin{equation} \label{value_function}
+    V_\theta(s_t) = \underset{a_t \sim \pi_\theta(s_t)}{\mathbb{E}} \left[ r(s_t, a_t) + V_\theta(s_{t'})) \right]
+\end{equation}
+This means that \textit{an optimal} value function \footnote{Otherwise, $V_\theta(s_t)$ inevitably carries some bias. For more, see \cite{Schulman-et-al-2016}} 
+$V_\theta(s_t)$ can be used as a baseline to reduce the variance of the policy gradient estimate.
+
 Examples of $V_\theta(s_t)$'s use include \cite{Schulman-et-al-2015} and \cite{Schulman-et-al-2017}, where they are used in two derivative algorithms, namely TRPO and PPO, respectively.
+
+\subsection{An Improved Policy Gradient Algorithm}
+We can now summarise the REINFORCE algorithm, which uses the policy gradient with a baseline to optimise the policy $\pi_\theta$.
+
+For precision's sake (and to answer the homework question), we will rewrite the policy gradient estimate to incorporate a baseline, as well as the reward-to-go $R_t$:
+\begin{equation} \label{policy_gradient_estimate_with_baseline}
+    \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left((R_t - \sum_{t=0}^{n} b(s_t))\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)
+\end{equation}
+
+\begin{algorithm}[H]
+    \caption{Improved Policy Gradient Algorithm}
+    \label{alg:reinforce}
+    \begin{algorithmic}[1]
+        \State Input: Policy $\pi_\theta$, learning rate $\alpha$, baseline of choice $b(s_t)$
+        \State Output: Updated policy $\pi_\theta$
+        \While{not converged}
+            \State Sample a batch of trajectories $T$ from the policy $\pi_\theta$
+            \For{each trajectory $T$ in the batch}
+                \State Compute the rewards-to-go $R_t$ for each time step $t$ in the trajectory
+                \State Compute the baseline $b(s_t)$ for each time step $t$ in the trajectory
+                \State Estimate the policy gradient $\nabla_\theta J(\pi_\theta)$ using Equation \eqref{policy_gradient_estimate_with_baseline}
+            \EndFor
+            \State Update the policy parameters using Equation \eqref{policy_gradient_update}
+        \EndWhile
+    \end{algorithmic}
+\end{algorithm}
 
 \section{Conclusion}
 In this report, we have derived the policy gradient and discussed how it can be used to optimise policies in reinforcement learning.
