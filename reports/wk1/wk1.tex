@@ -106,13 +106,13 @@ since we assume that $d_t$ no longer exists. (we have fully captured the environ
 
 In SL, models are made to learn relationships between \textit{features} and \textit{labels/targets}, 
 or \textit{input} and \textit{output pairs}. (\cite{Goodfellow-et-al-2016}). 
-Formally, let \st{$S = \{(\mathbf{x}_i, \mathbf{y}_i)\}$} {\color{red} $(\mathbf{x}_i, \mathbf{y}_i) \sim S$} be a dataset, 
+Formally, let $S = \{(\mathbf{x}_i, \mathbf{y}_i)\}$ be a dataset, 
 and let $f_\theta: X \to Y$ be a function that maps inputs to outputs
 where $\mathbf{x}_i \in X$ is the input and $\mathbf{y}_i \in Y$ is the output.
 For a given loss function $\mathcal{L}$, SL seeks $\theta$ 
 such that the \textbf{expected loss over} $S$ is minimized:
 \begin{equation} \label{sl_obj}
-    \theta^* = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \underset{(\mathbf{s}, \mathbf{a}) \sim S}{\mathbb{E}}[\mathcal{L}(f_\theta(\mathbf{x}), \mathbf{y})]
+    \theta^* = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \underset{(\mathbf{x}, \mathbf{y}) \in S}{\mathbb{E}}[\mathcal{L}(f_\theta(\mathbf{x}), \mathbf{y})]
 \end{equation}
 where $f_\theta$ is the model parameterized by $\theta$ (\cite{Levine-et-al-2023}).
 
@@ -124,23 +124,24 @@ As an extension of SL, IL\footnote{There does not seem to be consensus on the de
 learns a policy $\pi_\theta$ by trying to \textit{imitate} expert demonstrations.
 
 Writing the problem formally to contrast with SL,
-let \st{$S = \{(\mathbf{s}_i, \mathbf{a}_i)\}$} {\color{red} $(\mathbf{s}_i, \mathbf{a}_i) \sim S$} be a dataset of expert demonstrations, 
+let $S = \{(\mathbf{s}_i, \mathbf{a}_i)\}$ be a dataset of expert demonstrations, 
 where $\mathbf{s}_i$ is the state and $\mathbf{a}_i$ is the action taken by the expert.
 Let $\pi_\theta: S \to A$ be a policy that maps states to actions, where $A$ is the action space. 
 For a given loss function $\mathcal{L}$, $\theta$ is sought \textit{analogously as in SL}
-(contrast with \ref{sl_obj}):
+(contrast with Equation \ref{sl_obj}):
 
 \begin{equation} \label {il_obj}
-    \theta^* = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \underset{(\mathbf{s}, \mathbf{a}) \sim S}{\mathbb{E}}[\mathcal{L}(\pi_\theta(\mathbf{x}), \mathbf{y})]
+    \theta^* = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \underset{(\mathbf{s}, \mathbf{a}) \in S}{\mathbb{E}}[\mathcal{L}(\pi_\theta(\mathbf{x}), \mathbf{y})]
 \end{equation}
 
-Note that the loss function $\mathcal{L}$ may 
-\footnote{{\color{red} 
-    Of course, it COULD. Consider the case where an expert is a pre-trained RL model. 
-    But what we mean here is that the loss function is "closeness" to the expert's policy.
-}}
-depend on neither the environment dynamics,
-nor the reward function, but only on the expert demonstrations.
+Note that the loss function $\mathcal{L}$ {\color{red} need not be directly computed from the environment dynamics
+    and reward function.}
+\footnote{\color{red}
+    Of course, the loss function could still ultimately \textit{depend} on the dynamics and reward function.
+    Consider the case where an expert is a pre-trained RL model.
+    Clearly, if you try to track the expert actions, you are indirectly learning the environment dynamics.
+    But what we mean here is that the loss function is computed as "closeness" to the expert's policy.
+}
 
 \section{Reinforcement Learning (RL) vs SL}
 
@@ -211,6 +212,8 @@ we have the objective as:
    \pi^* = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t) \right]
 \end{equation}
 
+(Contrast with Equation \ref{il_obj}.)
+
 Though this objective is arguably an over-simplification of the RL problem,
 it is a good algorithm-agnostic starting point for understanding RL.
 
@@ -224,8 +227,8 @@ It is hoped that this report serves as a good foundation for similar, future rep
 \bibliographystyle{../colm2025_conference}
 \bibliography{wk1}
 
-\appendix
-\section{Appendix}
-You may include other additional sections here.
+% \appendix
+% \section{Appendix}
+% You may include other additional sections here.
 
 \end{document}

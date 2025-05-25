@@ -1,0 +1,295 @@
+\documentclass{article} % For LaTeX2e
+\usepackage[final]{../colm2025_conference}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{soul}
+\usepackage{cancel}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}[section]
+
+\usepackage{lineno}
+
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+
+\title{Week 2: Policy Gradient Methods}
+
+\author{\textbf{BEH} Chuen Yang}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\begin{document}
+
+\ifcolmsubmission
+\linenumbers
+\fi
+
+\maketitle
+
+\begin{abstract}
+This document uses the foundations laid previously to explore Policy Gradient methods.
+We theoretically analyse REINFORCE, a simple policy gradient algorithm formalized by \cite{Williams-1992},
+and discuss its use of \textit{baselines} to reduce variance in the policy gradient estimates.
+\end{abstract}
+
+\section{Recap}
+
+Consider a Markov Decision Process (MDP) ($S, A, \tau, r$) where $S$ is the state space, $A$ is the action space, 
+$\tau$ is the transition function and $r(s_t, a_t, s_{t + 1})$ is the reward function.
+At any time step $t$, the agent has state $s_t$ and takes action $a_t$.
+
+In Reinforcement Learning (RL), we are interested in learning a policy $a_t \sim \pi(\cdot | s_t)$ that maximises the 
+\textit{expected cumulative return}.
+Formally, where $T = (s_0, a_0, \dots, a_{n - 1}, s_n), s_0 \sim \rho_0$ describes a finite-horizon trajectory of length $n$,
+\begin{equation} \label{mdp_obj}
+    \begin{aligned}
+    \pi^* & = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t, s_{t + 1}) \right] \\
+          & = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n}  \underset{s_{t + 1} \sim \tau  (s_t, a_t)}{\mathbb{E}}[r(s_t, a_t, s_{t + 1})]\right] \\
+          & = \arg\max_\pi \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n}  r(s_t, a_t)\right] \\
+    \end{aligned}
+\end{equation}
+
+\section{Policy Gradient Methods}
+
+A straightforward technique to solve the above problem is to optimise for the expected cumulative return.
+This approach rests on the observation that the expected cumulative return is a differentiable function of the policy $\pi$,
+which allows us to approximate the optimal policy $\pi^*$, in a manner not too dissimilar to how we usually
+optimise differentiable functions in machine learning.
+
+In deep learning especially, this can be done by using a \textit{neural network} to represent the policy $\pi$,
+and then performing gradient ascent on the objective in Equation \eqref{mdp_obj}.
+
+In order to further understand how this works, we will first derive the policy gradient.
+
+Note that from here on, we assume the policy is a parameterised neural network $\theta$ of a specific architecture.
+We will thus re-write the policy as $\pi_\theta$. 
+
+
+\subsection{Deriving the Policy Gradient}
+(Note: The notation here has been synthesized from \cite{SpinningUp-2018}, \cite{Levine-et-al-2023} and \cite{Weng-2018}).
+
+We first expand the objective in Equation \eqref{mdp_obj}
+such that the inner terms are directly dependent on the policy $\pi_\theta$.
+Since $a_t \sim \pi_\theta(\cdot | s_t)$, $\pi_\theta(\cdot | s_t)$ contributes to the distribution of $s_{t + 1}$.
+That is,
+\begin{equation} \label{prob_state}
+    \begin{aligned}
+        \mathcal{P}(s_{t + 1} | \pi_\theta) & = \sum_{a_t \in A} \mathcal{P}(\tau(s_t, a_t) = s_{t + 1}) \mathcal{P}(a_t | \pi_\theta, s_t) \\
+                                            & = \sum_{a_t \in A} \mathcal{P}(s_{t + 1} | s_t, a_t) \pi_\theta(a_t | s_t) \\
+    \end{aligned}
+\end{equation}
+
+We now extend this observation to consider whole trajectories $T$. Since the actions taken within each $T$ are \textit{fixed},
+we can write the probability of a \textit{specific} trajectory $T$ under a given policy $\pi_\theta$ as:
+\begin{equation} \label{prob_traj}
+    \begin{aligned}
+        \mathcal{P}(T | \pi_\theta) & = \mathcal{P}(s_0 | \rho_0) \prod_{t=0}^{n} \mathcal{P}(s_{t + 1} | \pi_\theta) \\
+                                    & = \mathcal{P}(s_0 | \rho_0) \prod_{t=0}^{n} \left( \sum_{a_t \in A} \mathcal{P}(s_{t + 1} | s_t, a_t) \pi_\theta(a_t | s_t) \right) \\
+                                    & = \mathcal{P}(s_0 | \rho_0) \prod_{t=0}^{n} \left(\mathcal{P}(s_{t + 1} | s_t, a_t) \pi_\theta(a_t | s_t) \right) \\
+    \end{aligned}
+\end{equation}
+
+As expected, the probability of a trajectory $T$ is dependent on the policy $\pi_\theta$, or rather, $\theta$.
+Now if we find $\nabla_{\theta} \mathcal{P}(T | \pi_\theta)$, we can use the sum rule to find the gradient of the expected cumulative return.
+This is because:
+\begin{equation} \label{gradient_obj}
+    \begin{aligned}
+    \nabla_\theta \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t) \right] 
+        &= \nabla_\theta \left[ \int_{T} \left[\sum_{t=0}^{n} r(s_t, a_t) \right] \mathcal{P}(T | \pi_\theta) \right] \\
+        &= \int_{T} \left[\sum_{t=0}^{n} r(s_t, a_t) \right] \nabla_\theta \mathcal{P}(T | \pi_\theta) \\
+    \end{aligned}
+\end{equation}
+where, because we fixed the trajectory for each summand, $\sum_{t=0}^{n} r(s_t, a_t)$ are constants with respect to $\pi_\theta$.
+
+With a product of probabilities this is difficult, but we can use a log transformation to change the expression to a sum of log probabilities, 
+which is common in multivariable calculus 
+\footnote{Yes, it is also covered by \cite{SpinningUp-2018} and \cite{Williams-1992}, but it just so happens to also have been covered in CS2040S. Thanks Eldric!}:
+\begin{equation} \label{log_trick}
+    \nabla_\theta \mathcal{P}(T | \pi_\theta) = \mathcal{P}(T | \pi_\theta) \nabla_\theta \log(\mathcal{P}(T | \pi_\theta))
+\end{equation}
+
+Once again considering the entire trajectory $T$, we have:
+\begin{equation} \label{gradient_traj}
+    \begin{aligned}
+        \nabla_\theta \log(\mathcal{P}(T | \pi_\theta)) & = \nabla_\theta \log(\mathcal{P}(s_0 | \rho_0)) + \sum_{t=0}^{n} \nabla_\theta \log(\mathcal{P}(s_{t + 1} | s_t, a_t) \pi_\theta(a_t | s_t) \\
+        & = \cancelto{0}{\nabla_\theta \log(\mathcal{P}(s_0 | \rho_0))} + \sum_{t=0}^{n} \left( \nabla_\theta \log(\mathcal{P}(s_{t + 1} | s_t, a_t)) + \nabla_\theta \log(\pi_\theta(a_t | s_t) \right)\\
+        & = \cancelto{0}{\nabla_\theta \log(\mathcal{P}(s_0 | \rho_0))} + \sum_{t=0}^{n} \left( \cancelto{0}{\nabla_\theta \log(\mathcal{P}(s_{t + 1} | s_t, a_t))} + \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)\\
+        & = \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \\
+    \end{aligned}
+\end{equation}
+
+Now by using Equations \eqref{log_trick} and \eqref{gradient_traj}, we can rewrite Equation \eqref{gradient_obj} as:
+\begin{equation} \label{gradient_obj_rewritten}
+    \begin{aligned}
+    \nabla_\theta \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t) \right] 
+        &= \int_{T} \left[\sum_{t=0}^{n} r(s_t, a_t) \right] \nabla_\theta \mathcal{P}(T | \pi_\theta) \\
+        &= \int_{T} \left[\sum_{t=0}^{n} r(s_t, a_t) \right] \mathcal{P}(T | \pi_\theta) \nabla_\theta \log(\mathcal{P}(T | \pi_\theta) \\
+        &= \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t) \nabla_\theta \log(\mathcal{P}(T | \pi_\theta)) \right] \\
+        &= \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \left(\sum_{t=0}^{n} r(s_t, a_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right) \right]
+    \end{aligned}
+\end{equation}
+
+For simplicity, we will henceforth define $J(\pi_\theta)$ as the policy objective and $\nabla_\theta J(\pi_\theta)$ as the policy gradient:
+\begin{equation} \label{policy_objective}
+    J(\pi_\theta) = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \sum_{t=0}^{n} r(s_t, a_t) \right]
+\end{equation}
+\begin{equation} \label{policy_gradient}
+    \nabla_\theta J(\pi_\theta) = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \left(\sum_{t=0}^{n} r(s_t, a_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right) \right]
+\end{equation}
+
+and write the gradient ascent update as:
+\begin{equation} \label{policy_gradient_update}
+    \theta \leftarrow \theta + \alpha \nabla_\theta J(\pi_\theta)
+\end{equation} 
+where $\alpha$ is a learning rate hyperparameter.
+
+This completes the derivation of the \textit{basic} policy gradient \footnote{
+However, with some effort, we can simplify the above expression further.
+For brevity, we will directly reference one such \href{https://spinningup.openai.com/en/latest/spinningup/extra_pg_proof1.html}{proof here} (due to \cite{SpinningUp-2018}).
+}
+and we can \textit{theoretically} directly optimise it via Equation \eqref{policy_gradient_update}.
+
+\subsection{An Algorithm Using the Policy Gradient}
+We can now summarise the above derivation into a simple algorithm that uses the policy gradient to optimise the policy $\pi_\theta$.
+\begin{algorithm}[H]
+    \caption{Policy Gradient Algorithm}
+    \label{alg:policy_gradient}
+    \begin{algorithmic}[1]
+        \State Initialise policy parameters $\theta$
+        \While{not converged}
+            \State Sample a batch of trajectories $T$ from the policy $\pi_\theta$
+            \State Compute the policy gradient $\nabla_\theta J(\pi_\theta)$ using Equation \eqref{policy_gradient}
+            \State Update the policy parameters using Equation \eqref{policy_gradient_update}
+        \EndWhile
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{Improving the Policy Gradient}
+
+While the above derivation is theoretically sound, it can be improved in practice.
+
+When we perform gradient ascent $J(\pi_\theta)$, 
+we must do so by sampling a small number of trajectories $T$ from the policy $\pi_\theta$.
+This means our estimate of the policy gradient $\nabla_\theta J(\pi_\theta)$ will have
+variance of unknown magnitude, which can lead to instability and slow convergence in the training process. 
+
+% (See Appendix \ref{sec:variance} for a deeper look into the policy gradient's variance.)
+
+A common approach to reduce the variance of the policy gradient estimate is to use a \textit{state-dependent baseline} $b(s_t)$,
+as demonstrated in \cite{SpinningUp-2018} and \cite{Williams-1992}.
+% Yes, I tried to prove it. But I was repelled by the symbol-chasing.
+\footnote{Many sources, simply assert that the policy gradient has high variance, 
+and \textit{more crucially}, that the use of a baseline will lower variance in policy gradient estimates 
+(see \cite{Weng-2018}, \cite{SpinningUp-2018}, \cite{Takeshi-2017}, \cite{Sutton-and-Barto-1998}).
+However, these sources do not formally explain why. A proof is given in \cite{Wu-et-al-2018}.
+}
+
+\section{REINFORCE}
+REINFORCE is a simple policy gradient algorithm first formalized by \cite{Williams-1992} that uses the policy gradient derived above,
+but incorporates a baseline $b(s_t)$ to reduce the variance of the policy gradient estimate.
+
+\subsection{Baseline}
+The baseline function $b(s_t)$ can reduce the variance of the policy gradient estimate
+due to the Expected Gradient Log Probability (EGLP) theorem (\cite{SpinningUp-2018}), which states that
+if $b(s_t)$ only depends on the state $s_t$, then
+\begin{equation} \label{eglp}
+    \underset{a_t \sim \pi_\theta(s_t)}{\mathbb{E}} \left[ b(s_t)\nabla_\theta \log(\pi_\theta(a_t | s_t)) \right] = 0
+\end{equation}
+
+This means that the baseline does not affect the expected value of the policy gradient estimate,
+but it can reduce the variance of the estimate by centering the rewards around the baseline.
+
+This matches our intuition that a "baseline" is a reference point on which we can anchor
+our perceptions of the rewards' relative value.
+
+\subsection{REINFORCE Objective}
+
+Hence, the policy gradient with a baseline is given by:
+\begin{equation} \label{policy_gradient_baseline}
+    \nabla_\theta J(\pi_\theta) = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[\sum_{t=0}^{n} \left[ (r(s_t, a_t) - b(s_t)) \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right]\right]
+\end{equation}
+where $b(s_t)$ is a state-dependent baseline function.
+
+By Equation \eqref{eglp}, we can see that the baseline does not affect the expected value of the policy gradient estimate,
+but it can reduce the variance of the estimate by centering the rewards around the baseline.
+This helps to stabilise the training process and improve convergence from a practical standpoint.
+
+\subsection{Aside: Choices of Baseline}
+The choice of baseline function $b(s_t)$ can vary depending on the problem and the specific implementation of REINFORCE.
+However, a common choice is to use the value function $V_\theta(s_t)$ as the baseline (\cite{SpinningUp-2018}, \cite{Sutton-and-Barto-1998}, \cite{Weng-2018}), which is an estimate of the expected return from state $s_t$ under the current policy $\pi_\theta$.
+
+Examples of $V_\theta(s_t)$'s use include \cite{Schulman-et-al-2015} and \cite{Schulman-et-al-2017}, where they are used in two derivative algorithms, namely TRPO and PPO, respectively.
+
+\section{Conclusion}
+In this report, we have derived the policy gradient and discussed how it can be used to optimise policies in reinforcement learning.
+We have also shed light on a drawback of policy gradient methods, which is their high variance in practice.
+To tackle this, we studied REINFORCE by \cite{Williams-1992}, which incorporates a baseline to reduce the variance of policy gradient estimates.
+
+For now, this concludes theorywork on Reinforcement Learning. 
+While we did not cover RL or MDPs in general (specifically, we only covered \textit{finite-horizon}, \textit{undiscounted reward} MDPs), 
+we have covered the foundations of policy gradient methods in a way that makes the key intuitions behind them clear.
+
+% \appendix
+% \section{On the Variance of Policy Gradient} \label{sec:variance}
+% Many sources assert that the policy gradient has high variance, 
+% and \textit{more crucially}, that the use of a baseline will lower variance in policy gradient estimates 
+% (see \cite{Weng-2018}, \cite{SpinningUp-2018}, \cite{Takeshi-2017}, \cite{Sutton-and-Barto-1998}).
+% However, these sources do not formally explain why, and we will attempt to fill in the gap.
+
+% In short, we attempt a proof of the following theorem:
+% \begin{theorem} \label{policy_gradient_variance_theorem}
+%     The variance of the policy gradient estimate $\nabla_\theta J(\pi_\theta)$ can be reduced by using a baseline $b(s_t)$.
+% \end{theorem}
+
+% \begin{proof}
+%     % Modifying our policy gradients with baselines, we have:
+%     % \begin{equation} \label{policy_gradient_baseline_expanded}
+%     %     \nabla_\theta J(\pi_\theta) = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \left(\sum_{t=0}^{n}  r(s_t, a_t) - b(s_t) \right) \left(\sum_{t=0}^{n}\nabla_\theta \log(\pi_\theta(a_t | s_t)\right) \right]
+%     % \end{equation}
+
+%     % Hence, we can write the variance of the policy gradient estimate as:
+%     % $$\begin{aligned}
+%     %     \text{Var}(\nabla_\theta J(\pi_\theta))
+%     %     & = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[(\nabla_\theta J(\pi_\theta) - \underset{T \sim \pi_\theta}{\mathbb{E}}[\nabla_\theta J(\pi_\theta)])^2\right] \\
+%     %     & = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[(\nabla_\theta J(\pi_\theta))^2 - 2 \nabla_\theta J(\pi_\theta) \underset{T \sim \pi_\theta}{\mathbb{E}}[\nabla_\theta J(\pi_\theta)] + \left(\underset{T \sim \pi_\theta}{\mathbb{E}}[\nabla_\theta J(\pi_\theta)]\right)^2\right] \\
+%     %     & = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[(\nabla_\theta J(\pi_\theta))^2\right] - 2 \underset{T \sim \pi_\theta}{\mathbb{E}}[\nabla_\theta J(\pi_\theta)] \underset{T \sim \pi_\theta}{\mathbb{E}}[\nabla_\theta J(\pi_\theta)] + \left(\underset{T \sim \pi_\theta}{\mathbb{E}}[\nabla_\theta J(\pi_\theta)]\right)^2 \\
+
+%     % \end{aligned}$$
+
+%     By direct computation of the variance of the policy gradient estimate with a baseline, we have:
+%     $$
+%     \begin{aligned}
+%         \underset{T \sim \pi_\theta}{Var} \left[ \left(\sum_{t=0}^{n}  r(s_t, a_t) - b(s_t) \right) \nabla_\theta \log(\mathcal{P}(T | \pi_\theta)) \right] 
+%         & = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \left(\sum_{t=0}^{n}  r(s_t, a_t) - b(s_t) \right)^2 \nabla_\theta \log(\mathcal{P}(T | \pi_\theta))^2 \right] \\
+%         & \cancelto{0}{- \left( \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \left(\sum_{t=0}^{n}  r(s_t, a_t) - b(s_t) \right) \nabla_\theta \log(\mathcal{P}(T | \pi_\theta)) \right] \right)^2} \\
+%         \text{(by the EGLP Theorem)} & = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[ \left(\sum_{t=0}^{n}  r(s_t, a_t) - b(s_t) \right)^2 \left(\sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)^2 \right] \\
+%     \end{aligned}
+%     $$
+%     which is
+%     $$
+%     \begin{aligned}
+%         \underset{T \sim \pi_\theta}{\mathbb{E}} \left[\left(\sum_{t=0}^{n}  r(s_t, a_t) - b(s_t) \right)^2 \left(\sum_{t=0}^{n} \sum_{k=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \nabla_\theta \log(\pi_\theta(a_k | s_k)) \right)\right] \\
+%         = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[\left(\sum_{t=0}^{n}  r(s_t, a_t) - b(s_t) \right)^2 \left(\sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t))^2 + \sum_{t \neq k} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \nabla_\theta \log(\pi_\theta(a_k | s_k))\right)\right] \\
+
+%     \end{aligned}
+%     $$
+
+% \end{proof}
+
+
+\bibliographystyle{../colm2025_conference}
+\bibliography{wk2}
+
+% \appendix
+% \section{Appendix}
+% You may include other additional sections here.
+
+\end{document}
