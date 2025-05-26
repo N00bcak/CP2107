@@ -232,7 +232,7 @@ our perceptions of the rewards' relative value.
 
 Hence, the policy gradient with a baseline is given by:
 \begin{equation} \label{policy_gradient_baseline}
-    \nabla_\theta J(\pi_\theta) = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[\sum_{t=0}^{n} \left[ (r(s_t, a_t) - b(s_t)) \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right]\right]
+    \nabla_\theta J(\pi_\theta) = \underset{T \sim \pi_\theta}{\mathbb{E}} \left[\left(\sum_{t=0}^{n} r(s_t, a_t) - b(s_t) \right)  \left(\sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t))\right) \right]
 \end{equation}
 where $b(s_t)$ is a state-dependent baseline function.
 
@@ -258,7 +258,7 @@ We can now summarise the REINFORCE algorithm, which uses the policy gradient wit
 
 For precision's sake (and to answer the homework question), we will rewrite the policy gradient estimate to incorporate a baseline, as well as the reward-to-go $R_t$:
 \begin{equation} \label{policy_gradient_estimate_with_baseline}
-    \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left((R_t - \sum_{t=0}^{n} b(s_t))\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)
+    \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(R_t - \sum_{t=0}^{n} b(s_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)
 \end{equation}
 
 \begin{algorithm}[H]
