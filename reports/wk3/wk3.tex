@@ -71,18 +71,37 @@ with more sophisticated gradient estimation rules in order to improve the stabil
 
 \cite{Levine-et-al-2023} discuss several such improvements, and for brevity,
 we will only write out the PG estimate for each improvement in isolation.
-\begin{itemize} \label{lst:pg_improvements}
-    \item Rewards To Go: $\nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t={\color{red} k}}^{n} r(s_t, a_t)\right) \left( \sum_{t={\color{red} k}}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$ 
-        \newline where $k$ is the current timestep in the trajectory.
-    \item Advantage Normalization: $\nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t=0}^{n} {\color{red} A(s_t, a_t)} \right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$, 
-        \newline where $A(s_t, a_t) = \frac{r(s_t, a_t) - \mu}{\sigma}$ is the advantage function.
-    \item Reward Discounting: $\nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t=0}^{n} {\color{red} \gamma^t} r(s_t, a_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$, 
-        \newline where $\gamma < 1$ is the discount factor.
-    \item Use of Baseline: $\nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t=0}^{n} (r(s_t, a_t) {\color{red} - b(s_t)})\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$
-    \item Generalized Advantage Estimation (GAE) (\cite{Schulman-et-al-2018}): 
-        \newline $\nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t={\color{red} k}}^{n} {\color{red} A(s_t, a_t)}\right) \left( \sum_{t={\color{red} k}}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$
-        \newline where $k$ is the current timestep, $\gamma < 1$ is a discount factor, $A(s_t, a_t) = \sum_{l=k}^{\infty} (\gamma \lambda)^l \delta_{t + l}$, and $\delta_t = r(s_t, a_t) + \gamma V(s_{t + 1}) - V(s_t)$ is the temporal difference error.
-\end{itemize}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{p{0.225\textwidth} p{0.7\textwidth}}
+        \toprule
+        Improvement & PG Estimate \\
+        \midrule
+        Rewards To Go & 
+        $\displaystyle \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t={\color{red} k}}^{n} r(s_t, a_t)\right) \left( \sum_{t={\color{red} k}}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$ \newline
+        where $k$ is the current timestep in the trajectory. \\
+        \midrule
+        Advantage Normalization & 
+        $\displaystyle \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t=0}^{n} {\color{red} A(s_t, a_t)} \right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$ \newline
+        where $A(s_t, a_t) = \frac{r(s_t, a_t) - \mu}{\sigma}$ is the advantage function. \\
+        \midrule
+        Reward Discounting & 
+        $\displaystyle \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t=0}^{n} {\color{red} \gamma^t} r(s_t, a_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$ \newline
+        where $\gamma < 1$ is the discount factor. \\
+        \midrule
+        Use of Baseline & 
+        $\displaystyle \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t=0}^{n} (r(s_t, a_t) {\color{red} - b(s_t)})\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$ \newline
+        % This item had no explicit note in the original itemize structure
+        \\ 
+        \midrule
+        Generalized Advantage Estimation (GAE) (\cite{Schulman-et-al-2018}) & 
+        $\displaystyle \nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \sum_{i=1}^{m} \left(\sum_{t={\color{red} k}}^{n} {\color{red} A(s_t, a_t)}\right) \left( \sum_{t={\color{red} k}}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$ \newline 
+        where $k$ is the current timestep, $\gamma < 1$ is a discount factor, $A(s_t, a_t) = \sum_{l=k}^{\infty} (\gamma \lambda)^l \delta_{t + l}$, and $\delta_t = r(s_t, a_t) + \gamma V(s_{t + 1}) - V(s_t)$ is the temporal difference error. \\
+        \bottomrule
+    \end{tabular}
+    \caption{Improvements to the PG Algorithm}
+    \label{tab:pg_improvements}
+\end{table}
 
 Since \cite{Levine-et-al-2023} only consider a discount factor of $\gamma = 1$ (i.e. no discount) on a finite horizon task,
 we will experiment empirically with only the first two improvements using a task due to \cite{Towers-et-al-2024}.
@@ -140,7 +159,8 @@ of the edited template, which can be found at \href{code/wk3/README.md}{code/wk3
 \section{Experiments} 
 In keeping with \cite{Levine-et-al-2023}, we ran the training pipeline on the \textit{CartPole-v0} environment
 in order to study performance and convergence of the various PG algorithms
-using \ref{alg:policy_gradient} (and optionally, either rewards-to-go (RTG) or advantage normalization (AN) as in \ref{lst:pg_improvements}).
+using Algorithm \ref{alg:policy_gradient} (and optionally, either rewards-to-go (RTG) 
+or advantage normalization (AN) as in Table \ref{tab:pg_improvements}).
 
 \begin{table}[h]
     \centering
@@ -209,18 +229,18 @@ Moreover, by statistical intuition, we would expect the PG algorithm to work mor
 which lends itself to more stable gradient estimates and hence a smoother learning curve.
 
 \subsection{Empirical Results}
-The empirical results in Figure \ref{fig:avg_returns} show that:
+The empirical results in Figure \ref{fig:avg_returns}
+\footnote{
+    Detailed breakdowns of the performance of each algorithm variant
+    across each individual seed and experiment type can be found in the appendices.
+    See Appendices \ref{sec:experiment_type_plots} and \ref{sec:indiv_seed_plots} respectively.
+} show that:
 \begin{itemize}
     \item PG performs the worst, as expected.
     \item PG + RTG performs better than PG, but not as well as PG + AN, or PG + RTG + AN.
     \item Surprisingly, PG + AN performs better than PG + RTG + AN.
     \item A larger batch size leads to a smoother learning curve.
 \end{itemize}
-\footnote{
-    Detailed breakdowns of the performance of each algorithm variant
-    across each individual seed and experiment type can be found in the appendices.
-    See \ref{sec:indiv_seed_plots} and \ref{sec:experiment_type_plots} respectively.
-}
 
 We offer some conjectures as to why this is the case in the following subsections.
 
@@ -270,15 +290,19 @@ which can lead to suboptimal performance.
 \subsubsection{Impact of Batch Size}
 As expected, a larger batch size leads to better performance as evidenced in Figure \ref{fig:avg_returns}.
 Every experiment with a larger batch size, at least when we look at the percentage-wise progress of the average return,
-is better than the corresponding experiment with a smaller batch size.
+has better expected return than the corresponding experiment with a smaller batch size.
+
+Even considering the rewards on a per-timestep basis, the larger batch size experiments
+have a higher expected return than the smaller batch size experiments, though the effect
+is certainly less pronounced.
 
 \subsection{Miscellaneous Observations}
 In addition to the above observations, we also note a few points of interest when running the experiments:
 \begin{itemize}
-    \item The PG algorithm is very sensitive to the choice of random seed, perhaps due to 
-    the high variance in the gradient estimate.
-    \item We occasionally observe extended periods of 
-        performance degradation (more obvious in Figure \ref{fig:returns_by_seed}), where the average return drops appreciably
+    \item From the wide confidence interval in Figure \ref{fig:avg_returns}, the \textit{PG algorithm appears very sensitive to the choice of random seed}, 
+    perhaps due to the high variance in the gradient estimate.
+    \item We occasionally observe \textit{extended periods of 
+        performance degradation} (more obvious in Figure \ref{fig:returns_by_seed}), where the average return drops appreciably
         before recovering. 
         \begin{itemize}
             \item This is possibly due to \textit{catastrophic forgetting} (\cite{Goodfellow-et-al-2013}), which occurs as a consequence of the online nature of the algorithm,
@@ -294,7 +318,7 @@ and run experiments on the CartPole-v0 environment, with the goal of studying th
 of various tweaks to the simplest version of the PG algorithm. 
 
 We have observed most significantly that the PG algorithm is sensitive to the choice of random seed,
-that larger batch sizes can improve and destabilise PG algorithms' performance, 
+that larger batch sizes can improve PG algorithms' performance, 
 and that, at least without a baseline, advantage normalization (AN) is a more 
 consistent and effective improvement than rewards-to-go (RTG). 
 However, AN and RTG appear to synergize poorly.
@@ -320,19 +344,6 @@ the following hyperparameters were kept constant throughout the experiments:
     \bottomrule
 \end{tabular}
 
-\section{Individual Seed Plots} \label{sec:indiv_seed_plots}
-The following plots show the average return for each algorithm variant across each individual seed.
-\begin{figure}[p]
-    \centering
-    \captionsetup{justification=centering}
-    \includegraphics[width = \linewidth, height = 0.95\textheight]{plots/return-vs-env-steps-seeds.png}
-    \label{fig:returns_by_seed}
-    \caption{Returns for Each Algorithm Variant by Seed. As with Figure \ref{fig:avg_returns},
-    each datapoint was rounded to the nearest batch size for convenience of presentation.}
-\end{figure}
-
-\newpage
-
 \section{Experiment Type Plots} \label{sec:experiment_type_plots}
 The following plots show the average return for each algorithm variant across each experiment type.
 \begin{figure}[h]
@@ -342,6 +353,18 @@ The following plots show the average return for each algorithm variant across ea
     \label{fig:returns_by_experiment_type}
     \caption{Returns for Each Algorithm Variant by Experiment Type. As with Figure \ref{fig:avg_returns},
     each datapoint was rounded to the nearest batch size for convenience of presentation.}
+\end{figure}
+
+\newpage
+\section{Individual Seed Plots} \label{sec:indiv_seed_plots}
+The following plots show the average return for each algorithm variant across individual seeds.
+\begin{figure}[h]
+    \centering
+    \captionsetup{justification=centering}
+    \includegraphics[width = \linewidth, height = 0.85\textheight]{plots/return-vs-env-steps-seeds.png}
+    \caption{Returns for Each Algorithm Variant by Seed. As with Figure \ref{fig:avg_returns},
+    each datapoint was rounded to the nearest batch size for convenience of presentation.}
+    \label{fig:returns_by_seed}
 \end{figure}
 
 \end{document}
