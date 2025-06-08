@@ -182,3 +182,5 @@ cython_debug/
 **/*.bbl
 **/*.blg
 **/*.synctex.gz
+
+code/wk3/data

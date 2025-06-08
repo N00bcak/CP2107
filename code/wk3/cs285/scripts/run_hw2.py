@@ -70,7 +70,16 @@ def run_training_loop(args):
         print(f"\n********** Iteration {itr} ************")
         # TODO: sample `args.batch_size` transitions using utils.sample_trajectories
         # make sure to use `max_ep_len`
-        trajs, envsteps_this_batch = None, None  # TODO
+        # trajs, envsteps_this_batch = None, None  # TODO
+        ### BEGIN EDIT 3.1 ###
+        trajs, envsteps_this_batch = utils.sample_trajectories(
+            env,
+            agent.actor,
+            args.batch_size,
+            max_length=max_ep_len,
+            render=False,  # no need to render during training
+        )
+        ### END EDIT ###
         total_envsteps += envsteps_this_batch
 
         # trajs should be a list of dictionaries of NumPy arrays, where each dictionary corresponds to a trajectory.
@@ -78,7 +87,12 @@ def run_training_loop(args):
         trajs_dict = {k: [traj[k] for traj in trajs] for k in trajs[0]}
 
         # TODO: train the agent using the sampled trajectories and the agent's update function
-        train_info: dict = None
+        train_info: dict = agent.update(
+            obs=trajs_dict["observation"],
+            actions=trajs_dict["action"],
+            rewards=trajs_dict["reward"],
+            terminals=trajs_dict["terminal"],
+        )
 
         if itr % args.scalar_log_freq == 0:
             # save eval metrics
@@ -167,13 +181,15 @@ def main():
     if not (os.path.exists(data_path)):
         os.makedirs(data_path)
 
+    # logdir convention changed for convenience.
     logdir = (
-        logdir_prefix
-        + args.exp_name
-        + "_"
-        + args.env_name
-        + "_"
-        + time.strftime("%d-%m-%Y_%H-%M-%S")
+        # logdir_prefix
+        # + args.exp_name
+        # + "_"
+        # + args.env_name
+        # + "_"
+        # + time.strftime("%d-%m-%Y_%H-%M-%S")
+        f"{logdir_prefix}{args.exp_name}_seed_{args.seed}"
     )
     logdir = os.path.join(data_path, logdir)
     args.logdir = logdir

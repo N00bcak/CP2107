@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import Optional, Sequence
 import numpy as np
 import torch
@@ -7,6 +8,7 @@ from cs285.networks.critics import ValueCritic
 from cs285.infrastructure import pytorch_util as ptu
 from torch import nn
 
+# This import convention is very weird (I usually go External -> Important Library -> Built-In -> Local)
 
 class PGAgent(nn.Module):
     def __init__(
@@ -68,6 +70,16 @@ class PGAgent(nn.Module):
         # way. obs, actions, rewards, terminals, and q_values should all be arrays with a leading dimension of `batch_size`
         # beyond this point.
 
+        ### BEGIN EDIT 3.1 ###
+        # For some reason we are not supposed to convert to PyTorch tensors here...
+        # Shape: [batch_size, *dims]
+        obs = np.concatenate(obs, axis=0)
+        actions = np.concatenate(actions, axis=0).astype(np.int64)
+        rewards = np.concatenate(rewards, axis=0)
+        terminals = np.concatenate(terminals, axis=0)
+        q_values = np.concatenate(q_values, axis=0)
+        ### END EDIT ###
+
         # step 2: calculate advantages from Q values
         advantages: np.ndarray = self._estimate_advantage(
             obs, rewards, q_values, terminals
@@ -75,7 +87,15 @@ class PGAgent(nn.Module):
 
         # step 3: use all datapoints (s_t, a_t, adv_t) to update the PG actor/policy
         # TODO: update the PG actor/policy network once using the advantages
-        info: dict = None
+        # info: dict = None
+        ### BEGIN EDIT 3.1 ###
+        # This is a very weird code style...
+        info: dict = self.actor.update(
+            obs=obs,
+            actions=actions,
+            advantages=advantages,
+        )
+        ### END EDIT ###
 
         # step 4: if needed, use all datapoints (s_t, a_t, q_t) to update the PG critic/baseline
         if self.critic is not None:
@@ -94,12 +114,20 @@ class PGAgent(nn.Module):
             # trajectory at each point.
             # In other words: Q(s_t, a_t) = sum_{t'=0}^T gamma^t' r_{t'}
             # TODO: use the helper function self._discounted_return to calculate the Q-values
-            q_values = None
+            # q_values = None
+            ### BEGIN EDIT 3.1 ###
+            # The code seems to imply we should broadcast over each array.
+            q_values = list(map(self._discounted_return, rewards))
+            ### END EDIT ###
         else:
             # Case 2: in reward-to-go PG, we only use the rewards after timestep t to estimate the Q-value for (s_t, a_t).
             # In other words: Q(s_t, a_t) = sum_{t'=t}^T gamma^(t'-t) * r_{t'}
             # TODO: use the helper function self._discounted_reward_to_go to calculate the Q-values
-            q_values = None
+            # q_values = None
+            ### BEGIN EDIT 3.1 ###
+            # The code seems to imply we should broadcast over each array.
+            q_values = list(map(self._discounted_reward_to_go, rewards))
+            ### END EDIT ###
 
         return q_values
 
@@ -116,7 +144,12 @@ class PGAgent(nn.Module):
         """
         if self.critic is None:
             # TODO: if no baseline, then what are the advantages?
-            advantages = None
+            # advantages = None
+            ### BEGIN EDIT 3.1 ###
+            # Answer: The so-called "advantage" is just the Q-value.
+            advantages = q_values
+            ### END EDIT ###
+
         else:
             # TODO: run the critic and use it as a baseline
             values = None
@@ -144,7 +177,11 @@ class PGAgent(nn.Module):
 
         # TODO: normalize the advantages to have a mean of zero and a standard deviation of one within the batch
         if self.normalize_advantages:
-            pass
+            # pass
+            ### BEGIN EDIT 3.1 ###
+            # Prevent numerical instability.
+            advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-5)
+            ### END EDIT ###
 
         return advantages
 
@@ -156,12 +193,35 @@ class PGAgent(nn.Module):
         Note that all entries of the output list should be the exact same because each sum is from 0 to T (and doesn't
         involve t)!
         """
-        return None
 
+        # return None
+        ### BEGIN EDIT 3.1 ###
+        # Foldr
+        disc_return = reduce(
+            lambda acc, r: acc * self.gamma + r,
+            reversed(rewards),
+            0.0,
+        )
+        return np.full(
+            len(rewards),
+            disc_return,
+            dtype=np.float32,
+        )
+        ### END EDIT ###
+ 
+ 
 
     def _discounted_reward_to_go(self, rewards: Sequence[float]) -> Sequence[float]:
         """
         Helper function which takes a list of rewards {r_0, r_1, ..., r_t', ... r_T} and returns a list where the entry
         in each index t' is sum_{t'=t}^T gamma^(t'-t) * r_{t'}.
         """
-        return None
+        # return None
+        ### BEGIN EDIT 3.1 ###
+        # Now THIS is the one where we use DP.
+        rtgs = np.zeros(len(rewards), dtype=np.float32)
+        rtgs[-1] = rewards[-1]
+        for i in range(len(rewards) - 2, -1, -1):
+            rtgs[i] = rewards[i] + self.gamma * rtgs[i + 1]
+        return rtgs
+        ### END EDIT ###
