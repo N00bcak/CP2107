@@ -247,7 +247,7 @@ We offer some conjectures as to why this is the case in the following subsection
 \subsubsection{Impact of Advantage Normalization}
 Advantage normalization (AN) predictably improves the performance of the PG algorithm.
 By directly reducing the variance in the gradient estimate (through the advantage term),
-the algorithm takes more stable steps in the direction of the gradient,
+the algorithm takes more stable steps in the direction of the "true" gradient with respect to the environment,
 which \textit{CAN} lead to better convergence properties. 
 \footnote{This is not necessarily the case. See \cite{Andrychowicz-et-al-2020} 
 for data to the contrary.}
@@ -272,7 +272,8 @@ Moreover, as the time dimension is not in the agent's state,
 the agent does not learn why it receives lower returns at later timesteps.
 
 Put together, this means that the agent will be unable to model the time-dependent aspects of the environment,
-and will optimize for the earlier timesteps in the trajectory, which are more likely to have higher returns.
+and will optimize for the earlier timesteps in the trajectory, which are more likely to have higher returns
+and thus higher advantage.
 \footnote{
     This can be alleviated by including a time dimension in the agent's state.
     However, it appears that this is not common practice (at least, within \cite{Towers-et-al-2024}).
@@ -290,6 +291,7 @@ which can lead to suboptimal performance.
 \subsubsection{Impact of Batch Size}
 As expected, a larger batch size leads to better performance as evidenced in Figure \ref{fig:avg_returns}.
 Every experiment with a larger batch size, at least when we look at the percentage-wise progress of the average return,
+(i.e. how many sampling steps the experiment has been through)
 has better expected return than the corresponding experiment with a smaller batch size.
 
 Even considering the rewards on a per-timestep basis, the larger batch size experiments
@@ -352,7 +354,7 @@ The following plots show the average return for each algorithm variant across ea
     \includegraphics[width = \linewidth, height = 0.4\textheight]{plots/return-vs-env-steps-all-expt-types.png}
     \label{fig:returns_by_experiment_type}
     \caption{Returns for Each Algorithm Variant by Experiment Type. As with Figure \ref{fig:avg_returns},
-    each datapoint was rounded to the nearest batch size for convenience of presentation.}
+    each datapoint was rounded to the nearest sampling step for convenience of presentation.}
 \end{figure}
 
 \newpage
@@ -363,7 +365,7 @@ The following plots show the average return for each algorithm variant across in
     \captionsetup{justification=centering}
     \includegraphics[width = \linewidth, height = 0.85\textheight]{plots/return-vs-env-steps-seeds.png}
     \caption{Returns for Each Algorithm Variant by Seed. As with Figure \ref{fig:avg_returns},
-    each datapoint was rounded to the nearest batch size for convenience of presentation.}
+    each datapoint was rounded to the nearest sampling step for convenience of presentation.}
     \label{fig:returns_by_seed}
 \end{figure}
 
