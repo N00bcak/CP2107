@@ -151,14 +151,17 @@ a few things remain generally agreed upon \textit{in the modern context} (\cite{
     \item Many modern LLMs are trained with \textit{some variant of the Transformer architecture} (\cite{Vaswani-et-al-2017}),
         which possesses a powerful attention mechanism that allows the model to determine what it should focus on in the input text.
         \footnote{
-            There are some notable exceptions such MAMBA (which is a State Space Model) (\cite{Gu-and-Dao-2024})
-            and RWKV (which is a Recurrent Neural Network) (\cite{Peng-et-al-2023}).
+            There are some notable exceptions such as MAMBA (State Space Model) (\cite{Gu-and-Dao-2024})
+            and RWKV (Recurrent Neural Network) (\cite{Peng-et-al-2023}).
             Aside from RWKV which does not suffer from the same limitations, 
             RNNs are rarely used in modern LLMs since it is difficult to parallelize them.
         }
+        \footnote{
+            For a great video about the Transformer architecture, see \cite{Sanderson-2025}.
+        }
 \end{itemize}
 
-\subsection{How Can I Use LLMs?}
+\section{How Do I Use LLMs?}
 
 Perhaps the most common way to interact with LLMs is through a chat interface,
 where users can type in prompts and receive responses in natural language. 
@@ -176,22 +179,28 @@ that fall under this umbrella:
 \toprule
 \textbf{Technique} & \textbf{Description} \\
 \midrule
-\textbf{Zero-shot prompting} & Users provide a prompt without any examples, \newline 
+\textbf{Zero-shot prompting} & Users provide a prompt without any examples,
     and the model generates a response based on its pre-trained knowledge. \\
 \addlinespace
-\textbf{Few-shot prompting} & Users provide a few examples of the desired input-output pairs \newline within the prompt itself.
-The model then uses these examples \newline to generate responses that follow the same pattern. \\
+\textbf{Few-shot prompting} & Users provide a few examples of the desired input-output pairs within the prompt itself.
+The model then uses these examples to generate responses that follow the same pattern. \\
 \addlinespace
-\textbf{Conversational prompting} & Users structure their prompts as if they are having a conversation \newline with an AI assistant,
-often using special tags or delineators \newline to distinguish between user inputs and expected assistant responses. \\
+\textbf{Conversational prompting} & Users structure their prompts as if they are having a conversation with an AI assistant,
+often using special tags or markers to distinguish between user inputs and expected assistant responses. \\
 \addlinespace
-\textbf{Chain of Thought (CoT) prompting (\cite{Wei-et-al-2023})} & Instead of directly asking for an answer, users prompt the model \newline to generate intermediate reasoning steps,
-which can significantly \newline improve performance on tasks requiring complex logical deduction. \\
+\textbf{Chain of Thought (CoT) prompting (\cite{Wei-et-al-2023})} & Instead of directly asking for an answer, users prompt the model \newline 
+to generate intermediate reasoning steps, which can significantly \newline 
+improve performance on tasks requiring complex logical deduction. 
+\\
 \bottomrule
 \end{tabular}
 \caption{Some Prompt Engineering Techniques}
 \label{tab:pe_tech}
 \end{table}
+\footnote{
+    As \cite{Karpathy-2025} demonstrates, not affording LLMs the opportunity to think step-by-step
+    within the context window (as Chain-of-Thought does) can lead to poor performance on tasks that require reasoning.
+}
 \footnote{
     However, you can also use LLMs in other ways, for example,
     by integrating them into applications e.g. via Anthropic's MCP (\cite{Anthropic-2025}),
@@ -209,21 +218,21 @@ Which one is the most suitable depends on the user's needs and resources.
 \toprule
 \textbf{Type} & \textbf{Description} \\
 \midrule
-\textbf{Proprietary LLMs} & Developed and maintained by commercial entities, 
+\textbf{Proprietary LLMs} & Among the most powerful LLMs. Developed and maintained by commercial entities, 
     such as OpenAI's GPT series (\cite{ChatGPT-2022}), Anthropic's Claude (\cite{Anthropic-2025}), 
-    and Google's Gemini (\cite{Google-2025}). Access is typically through pay-per-token APIs. \\
+    and Google's Gemini (\cite{Google-2025}), typically for profit. Access is typically through pay-per-token APIs. \\
 \addlinespace
 \textbf{Open-source LLMs} & Developed by various organizations and individuals, 
-with their underlying structures and learned weights publicly available. \newline 
-    Examples include Meta's LLaMA models(\cite{Meta-2023}) and Deepseek's models (\cite{Deepseek-2024,Deepseek-2025}). \newline 
+    with their underlying structures and learned weights publicly available. 
+    Examples include Meta's LLaMA models (\cite{Meta-2023}) and Deepseek's models (\cite{Deepseek-2024,Deepseek-2025}). 
     Platforms like HuggingFace (\cite{Huggingface}) typically serve as repositories for these models. \\
 \addlinespace
-\textbf{Inference Providers} & Companies that host LLMs and provide access via APIs, \newline 
-    allowing users to run inference without needing to manage the underlying infrastructure. \newline 
+\textbf{Inference Providers} & Companies that host LLMs and provide access via APIs, 
+    allowing users to run inference without needing to manage the underlying infrastructure. 
     Examples include Hyperbolic (\cite{Hyperbolic}) and other cloud-based services. \\
 \addlinespace
-\textbf{Local LLMs} & Smaller, open-source LLMs that can be run on personal computers \newline 
-    or local servers. Examples include Qwen3 (\cite{Alibaba-2025}). \newline 
+\textbf{Local LLMs} & Smaller, open-source LLMs that can be run on personal computers 
+    or local servers. Examples include Qwen3 (\cite{Alibaba-2025}). 
     These models can be run using tools like LM Studio (\cite{LMStudio}) for local inference. \\
 \bottomrule
 \end{tabular}
@@ -273,8 +282,8 @@ This process is called \textbf{tokenization} (\cite{Karpathy-2025}),
 where the text is broken down into smaller units called "tokens." 
 (To understand why we do so, see Footnote \ref{fn:seq2seq}.)
 
-Typically, tokens are one-to-one mapping of numerical IDs to strings of symbols, as the below table shows:
-\begin{table}[h]
+Typically, tokens are one-to-one mapping of numerical IDs to strings of symbols, as Table \ref{tab:tok_schemes} shows:
+\begin{table}[h!]
 \centering
 \begin{tabular}{p{0.25\textwidth}p{0.5\textwidth}}
 \toprule
@@ -292,13 +301,13 @@ Typically, tokens are one-to-one mapping of numerical IDs to strings of symbols,
 \end{table}
 
 For example, the GPT-3 model (\cite{Brown-et-al-2020}) uses a sub-word tokenization scheme 
-called Byte Pair Encoding (BPE) (\cite{Sennrich-et-al-2016}).
+called Byte Pair Encoding (BPE) (\cite{Sennrich-et-al-2016}), and it empirically appears to provide
+a good compromise between sequence length (i.e. how many tokens are needed to represent a piece of text)
+and the complexity of the model (i.e. how many "words" the model needs to learn) (\cite{Brown-et-al-2020}).
 
 \subsection{Self-Supervised Learning}
 Once the data is tokenized, the next step is to train a Transformer (\cite{Vaswani-et-al-2017}) to learn the patterns in the data.
-
-Here, the model is trained to predict the next token in a sequence,
-given all the tokens that have come before it.
+Here, the model is trained to predict the next token in a sequence, given all the tokens that have come before it.
 
 Practically, this means that the model ingests a sequence of tokens as input, 
 processes them through its layers, and outputs a probability distribution over the next token
@@ -322,7 +331,7 @@ As mentioned by \cite{Karpathy-2025}, pre-training an LLM is a resource-intensiv
 Creating solid pre-trained LLMs can take months of training on powerful hardware,
 often involving thousands of GPUs or TPUs working in parallel. (\cite{Alibaba-2025,Anthropic-2025,ChatGPT-2022,Deepseek-2024,Google-2025,Meta-2023})
 
-As such, pre-training is usually the preserve of a select, immensely well-funded few.
+As such, true LLM pre-training is usually the preserve of a select few immensely well-funded entities.
 
 \subsection{Aside: Some Quirks of Base Models}
 While pre-training equips an LLM with a broad understanding of whichever languages it was trained on
@@ -450,9 +459,8 @@ the LLM may still generate responses that are inconsistent or undesirable.
 While RL post-training is a powerful technique that can significantly improve the performance of LLMs,
 it is not without challenges.
 
-As with most RL problems, RL post-training suffers from instability due to
+As with most RL problems (\cite{Jones-2021}), RL post-training suffers from instability due to
 the multitude of moving parts within an RL post-training setup.
-\cite{Jones-2021}
 \footnote{
     We speculate somewhat baselessly that the high variance inherent to most RL problems 
     (\cite{Bjorck-et-al-2022, Irpan-2018})
