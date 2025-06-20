@@ -1,0 +1,289 @@
+\documentclass{article} % For LaTeX2e
+\usepackage[final]{../colm2025_conference}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage{booktabs}
+\usepackage{soul}
+\usepackage{cancel}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{subfig}
+\newtheorem{theorem}{Theorem}[section]
+
+\usepackage{lineno}
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+
+\title{Week 6: InstructGPT Report}
+
+\author{\textbf{BEH} Chuen Yang}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\begin{document}
+
+\ifcolmsubmission
+\linenumbers
+\fi
+
+\maketitle
+
+\begin{abstract}
+    This report takes a closer look at the InstructGPT paper by \cite{InstructGPT-2022},
+    one of the first papers to describe training language models which
+    are attuned to human preferences, in terms of safety, truthfulness, and helpfulness.
+    We detail insights from the paper, and follow up with a few potential 
+    research directions inspired by \cite{InstructGPT-2022}'s findings.
+\end{abstract}
+
+\section{Paper Summary}
+\cite{InstructGPT-2022} introduce InstructGPT, a language model (LM) trained not just
+by using a large corpus of text (in pre-training, as well as Supervised Fine-Tuning (SFT)), 
+but also with high-quality human feedback via Reinforcement Learning from Human Feedback (RLHF) 
+(\cite{Christiano-et-al-2017, Stiennon-et-al-2020}).
+
+The authors find InstructGPT to be more truthful and less toxic
+based on dataset as well as human evaluations (e.g. using \cite{Gehman-et-al-2020}),
+at minimal cost to its performance on public NLP benchmarks.
+Despite it being $<$1\% of GPT-3-175B's size, InstructGPT
+was vastly preferred by human evaluators over GPT-3-175B 
+when asked to select between the two models' outputs
+on a variety of tasks.
+
+\subsection{Why Human Feedback?}
+While most LMs aim to predict the next token in a sequence
+to the best of their abilities, and indeed, they have done so very well 
+at this point (\cite{Radford-et-al-2019, Brown-et-al-2020}), the authors of InstructGPT
+are interested in taking LMs a step further: they want LMs
+to be better understand users' intent, and act in a way which is
+most helpful to them (this is termed \textit{alignment}).
+
+With a pure "predict-next-token" objective, LMs are prone
+to generating objectionable outputs, described in the paper as 
+"toxic, biased, or otherwise harmful" (\cite{InstructGPT-2022}).
+
+While definitive causes have not been established,
+it is likely that the LMs have simply encountered
+such content in the training data, and are producing it as
+they were trained to do. While it may seem irresponsible to 
+include such content in the training data, we note it may be 
+impossible to completely filter out such content via manual methods, given the
+sheer size of the training data (\cite{Karpathy-2025}).
+
+Instead, model alignment emerges as a more practical and scalable alternative. 
+In this regime, an \textit{aligned} LM is still 
+\textit{capable} of spewing out objectionable content, 
+but is \textit{trained to avoid doing so}. Qualitatively speaking,
+this would mean the LM is better at answering users' queries and/or
+commands in a way that is helpful, truthful, and safe. 
+
+\section{The RLHF Pipeline}
+
+The original RLHF pipeline used in InstructGPT comes after
+\textit{Pre-Training and Supervised Fine-Tuning (SFT)} of the LM,
+and consists of three sub-steps:
+
+\subsection{Human-Labelled Data Collection}
+
+Aligning LMs doubtlessly requires gold-standard, human feedback on
+possible responses by the LM to user queries, which can still
+be quite taxing, even if not prohibitive, to collect.
+
+Indeed, \cite{InstructGPT-2022} had to engage a team of 40 contractors
+selected for their ability to detect and respond to sensitive speech
+(i.e. anything that could elicit strong, negative emotions).
+
+The contractors were given various tasks such as
+\begin{itemize}
+    \item Creating instruction-like prompts for the LM to respond to.
+    \item Writing responses to user- and contractor-generated prompts.
+    \item Ranking the LM's responses to user- and contractor-generated prompts,
+        based on their helpfulness, truthfulness, and safety.
+\end{itemize}
+
+\subsection{Reward Model Training}
+
+Despite the extensive work done by the contractors, it remains vanishingly unlikely 
+that the LM will generate a word-for-word copy of contractors' responses to user 
+queries under typical usage conditions. 
+
+This motivates the use of Reward Modelling to predict the quality of the 
+LM's responses \textit{in general}, based on the contractors' feedback 
+on a small set of responses. (See Section \ref{sec:bt-model} for specifics about the Reward Model.)
+
+The Reward Model hence serves as an estimate of the quality of the LM's responses,
+and is trained on the contractors' rankings, which are converted into a reward signal
+to be used during the next step of the RLHF pipeline.
+
+\subsection{How RL powers RLHF}
+Finally, the Reward Model is used to train the LM via Reinforcement Learning (RL);
+specifically, Proximal Policy Optimization (PPO) \footnote{
+    Proximal Policy Optimization (PPO) is a popular on-policy, model-free, policy-gradient RL algorithm,
+    and a simplification of Trust Region Policy Optimization (TRPO)
+    (\cite{Schulman-et-al-2015, Schulman-et-al-2017}).
+    PPO is best known for its "clipping" mechanism, which constrains the policy updates
+    such that action distributions do not change too much from update to update.
+    This helps to stabilize training and prevent large, disruptive updates
+    (\cite{Schulman-et-al-2017}).
+} (\cite{Schulman-et-al-2017}),
+where the Reward Model contributes principally to the environment's reward signal.
+
+Unlike the Markov Decision Process (MDP) framework used in previous weeks,
+\cite{InstructGPT-2022} formulate the problem as an Armed Bandit problem
+(\cite{Sutton-and-Barto-1998}). See Table \ref{tab:rlhf_env} for a more detailed description 
+of the RLHF environment.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{p{0.2\textwidth}p{0.8\textwidth}}
+\toprule
+\textbf{Component} & \textbf{Description} \\
+\midrule
+\textbf{Observation} & The user query. \\
+\midrule
+\textbf{Action} & The LM's response to the user query. \\
+\midrule
+\textbf{Reward} & The "preference" score of the LM's response. Specifically,
+    $r = r_\theta(x, y) - \beta \log(\pi_{\phi}^{RLHF}(y)), \beta > 0$ \\
+\bottomrule
+\end{tabular}
+\caption{Description of InstructGPT's RLHF environment.}
+\label{tab:rlhf_env}
+\end{table}
+
+By maximising the expected reward,
+the LM hopefully learns to generate responses which are more "preferred" by humans in general,
+while maintaining the robust sequence modelling capabilities it has learned
+during the pre-training and SFT phases.
+
+\subsection{Aside: The Bradley-Terry Model} \label{sec:bt-model}
+
+\cite{InstructGPT-2022}, in aiming to follow the methodology developed in
+\cite{Ziegler-et-al-2019} and \cite{Stiennon-et-al-2020},
+use \textit{pairwise preferences} to train their Reward Model.
+
+Some sleuthing reveals that this is likely based on the Bradley-Terry model
+(\cite{Bradley-and-Terry-1952}), which is a statistical model for paired comparisons.
+For concision, we do not go into the details of the model here, but
+offer a few sources for the interested reader 
+(\cite{Bradley-and-Terry-1952, Stiennon-et-al-2020, Fujii-2024}).
+
+\section{Interesting Findings}
+
+\subsection{InstructGPT vs GPT-3-175B}
+Perhaps the most interesting finding of \cite{InstructGPT-2022} is
+the outsized impact of the RLHF pipeline on the LM's "utility".
+Despite having only 1\% of the parameters of GPT-3-175B,
+and being tuned on just a bit more data ($\sim$100k contractor and user-generated prompts),
+InstructGPT was overwhelmingly preferred by human evaluators over GPT-3-175B.
+
+This cements RLHF's status as a powerful technique for
+improving LMs' responses to user queries, and confirms that
+LMs' \textit{utility} is not as strongly correlated with their size, training set size,
+or benchmark performance as previously thought.
+
+\subsection{Reward Model Generalization}
+The authors found in a cross-validation study that the reward model
+was able to generalize well to prompts from unseen contractors.
+When splitting labelers into 5 folds, the authors found that inter-fold
+prediction accuracy ($(72.4 \pm 0.4) \%$) (i.e. How often does the model correctly predict
+the preferred response of a contractor in the test fold?) was higher 
+than intra-fold accuracy ($(69.6 \pm 0.4) \%$) (i.e. How often does the model
+predict the preferred response of a contractor in one of the training folds?).
+
+This suggests that, while obviously not perfect, the reward model
+gives a relatively good approximation of the contractors' preferences
+in general. It remains to be determined if the contractors
+are representative of the general population.
+
+\subsection{RLHF May Not Be A Pareto Improvement} \label{sec:not-pareto}
+While RLHF so far has appeared to be a very powerful technique
+so far, \cite{InstructGPT-2022} found that there may be a trade-off between 
+benchmark performance and human preference.
+Though \cite{InstructGPT-2022} tried to mitigate this by incorporating
+update gradients from the Pre-Train + SFT model, the authors still noticed
+a very slight drop in performance across several benchmarks.
+
+It is not clear if this is a fundamental limitation of the RLHF
+pipeline, or if it is simply a result of the limited amount of data
+or flawed reward model used in the study.
+
+With the benefit of newer interpretability studies, this phenomenon
+may be justified and explained through certain learned behaviors like
+sycophancy (\cite{Sharma-et-al-2023}), where the LM agrees with the user
+without regard for the truth or helpfulness of the response.
+
+On the other hand, a different RLHF setup due to \cite{Zheng-et-al-2024}
+demonstrates RLHF's potential to improve humans' preference to LMs' responses
+as well as their performance on benchmarks, suggesting that
+the trade-off may not be fundamental, and that it is possible to
+achieve a Pareto improvement with RLHF.
+
+\section{Future Directions}
+
+Having read the paper and analyzed its findings, here are the
+relatively promising research directions documented in the paper,
+as well as a few which emerge from cross-referencing other papers.
+
+While these are but a subset of the paper's own proposed
+future directions, it must be noted that since the paper's publication,
+RL post-training has progressed significantly, and many of the
+directions proposed in the paper have been well-explored in subsequent works.
+
+\subsection{Improving Reward Modelling}
+The Reward Model used in InstructGPT appears, at first glance,
+to be well-grounded in statistical theory. This, however, does not preclude
+the possibility of having better Reward Model designs for \textit{general-purpose} RL with
+feedback.
+
+An example of what good Reward Modelling could do would be Reinforcement Learning with
+Verifiable Rewards (RLVR) (\cite{Lambert-et-al-2024}), whose potential
+in improving LM performance on math, computing, and reasoning tasks
+has been adequately demonstrated by \cite{Deepseek-2025} in Deepseek-R1.
+
+However, it is unclear if there is a strictly better way to
+model reward signals for RL with feedback 
+\textit{without the need to restrict post-training domains}.
+
+\subsection{Scaling RL With (Not Necessarily Human) Feedback}
+While RLHF is clearly more scalable than other methods like 
+manual SFT and soliciting human feedback on every possible output of the LM,
+LMs have improved significantly since the paper's publication, and
+it is possible that human annotations for the LM's responses
+can be augmented with these more powerful LMs.
+
+A particularly interesting example of this is Anthropic's Constitutional AI framework
+(\cite{Bai-et-al-2022}), which leverages AI feedback to improve the harmlessness of LMs. 
+Their approach demonstrates the potential for using advanced LMs to enhance the quality and safety of AI-generated content
+at massive scales.
+
+\subsection{Is RL A Pareto Improvement?}
+As discussed in Section \ref{sec:not-pareto}, it appears that 
+RLHF may not be a Pareto improvement, and indeed, 
+there appears to be little consensus / exploration (\cite{Lin-et-al-2024, Berg-et-al-2024}) on whether
+RLHF approaches, if designed well, \textit{DO} meaningfully improve LMs' performance on benchmarks
+and human preference. Moreover, even if they do, it is not clear 
+\textit{what} the underlying mechanisms behind this improvement are.
+
+\section{Conclusion}
+At the end of this report, we have analyzed the InstructGPT paper by \cite{InstructGPT-2022},
+and noted down numerous interesting findings, as well as potential future directions
+from the paper (and other works) pertaining to RLHF research, as well as RL post-training for LMs in general.
+
+\bibliographystyle{../colm2025_conference}
+\bibliography{wk6}
+
+\appendix
+
+\end{document}
