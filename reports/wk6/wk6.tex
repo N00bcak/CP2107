@@ -62,11 +62,10 @@ when asked to select between the two models' outputs
 on a variety of tasks.
 
 \subsection{Why Human Feedback?}
-While most LMs aim to predict the next token in a sequence
-to the best of their abilities, and indeed, they have done so very well 
-at this point (\cite{Radford-et-al-2019, Brown-et-al-2020}), the authors of InstructGPT
-are interested in taking LMs a step further: they want LMs
-to be better understand users' intent, and act in a way which is
+While most LMs have managed to predict the next token in natural language sequences
+with much success at this point (\cite{Radford-et-al-2019, Brown-et-al-2020}), 
+the authors of InstructGPT are interested in taking LMs a step further: 
+they want LMs to be better understand users' intent, and act in a way which is
 most helpful to them (this is termed \textit{alignment}).
 
 With a pure "predict-next-token" objective, LMs are prone
@@ -140,13 +139,13 @@ specifically, Proximal Policy Optimization (PPO) \footnote{
 where the Reward Model contributes principally to the environment's reward signal.
 
 Unlike the Markov Decision Process (MDP) framework used in previous weeks,
-\cite{InstructGPT-2022} formulate the problem as an Armed Bandit problem
+\cite{InstructGPT-2022} formulate the problem as a single-step Armed Bandit problem
 (\cite{Sutton-and-Barto-1998}). See Table \ref{tab:rlhf_env} for a more detailed description 
 of the RLHF environment.
 
 \begin{table}[h!]
 \centering
-\begin{tabular}{p{0.2\textwidth}p{0.8\textwidth}}
+\begin{tabular}{p{0.3\textwidth}p{0.7\textwidth}}
 \toprule
 \textbf{Component} & \textbf{Description} \\
 \midrule
@@ -156,6 +155,9 @@ of the RLHF environment.
 \midrule
 \textbf{Reward} & The "preference" score of the LM's response. Specifically,
     $r = r_\theta(x, y) - \beta \log(\pi_{\phi}^{RLHF}(y)), \beta > 0$ \\
+\midrule
+\textbf{Transition Dynamics} & Episodes end immediately after the LM completes its response (i.e. 1 action only). 
+    Rewards are disbursed via $r$. \\
 \bottomrule
 \end{tabular}
 \caption{Description of InstructGPT's RLHF environment.}
@@ -194,9 +196,9 @@ LMs' \textit{utility} is not as strongly correlated with their size, training se
 or benchmark performance as previously thought.
 
 \subsection{Reward Model Generalization}
-The authors found in a cross-validation study that the reward model
+\cite{InstructGPT-2022} found in a cross-validation study that the reward model
 was able to generalize well to prompts from unseen contractors.
-When splitting labelers into 5 folds, the authors found that inter-fold
+When splitting labelers into 5 folds, \cite{InstructGPT-2022} found that inter-fold
 prediction accuracy ($(72.4 \pm 0.4) \%$) (i.e. How often does the model correctly predict
 the preferred response of a contractor in the test fold?) was higher 
 than intra-fold accuracy ($(69.6 \pm 0.4) \%$) (i.e. How often does the model
@@ -212,7 +214,7 @@ While RLHF so far has appeared to be a very powerful technique
 so far, \cite{InstructGPT-2022} found that there may be a trade-off between 
 benchmark performance and human preference.
 Though \cite{InstructGPT-2022} tried to mitigate this by incorporating
-update gradients from the Pre-Train + SFT model, the authors still noticed
+update gradients from the Pre-Train + SFT model, \cite{InstructGPT-2022} still noticed
 a very slight drop in performance across several benchmarks.
 
 It is not clear if this is a fundamental limitation of the RLHF
