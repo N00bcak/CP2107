@@ -209,6 +209,7 @@ if compile:
     print("compiling the model... (takes a ~minute)")
     unoptimized_model = model
     model = torch.compile(model) # requires PyTorch 2.0
+    print("Compilation complete!")
 
 # wrap model into DDP container
 if ddp:
