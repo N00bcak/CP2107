@@ -1,0 +1,120 @@
+Overriding: out_dir = out-shakespeare-char
+Overriding: num_samples = 10
+Overriding: start = Beware the ides of March.
+Overriding: max_new_tokens = 200
+Overriding: temperature = 0.6
+number of parameters: 9.46M
+Loading meta from data/shakespeare_char/meta.pkl...
+Beware the ides of March.
+
+CORIOLANUS:
+O, men, my lord!
+
+CORIOLANUS:
+And I have striked and barren the world to be
+the thought with my father prize our tongue to the competer.
+
+SICINIUS:
+Now, sir, in the strike of the people 
+---------------
+Beware the ides of March.
+
+GLOUCESTER:
+Alas, the cousin of my heart that news her years
+Before the execution of the selfsame thoughts
+For the instrument of the Tower,
+Were poor of her burthen and rude for the ground:
+But if a
+---------------
+Beware the ides of March.
+
+SICINIUS:
+Pray, you must not be as in his wards.
+
+MENENIUS:
+Be it consul, and you have hanged to your part,
+And shall be possible. You have sentenced by
+To meet the people of his consuls,
+I have mad
+---------------
+Beware the ides of March.
+
+KING RICHARD II:
+What six of the city of Lancaster?
+
+TRANIO:
+My lord?
+
+KING RICHARD III:
+What shall I fear? and you to me good?
+
+TRANIO:
+No man to remember the bear to such a face?
+
+TRANIO:
+The lord
+---------------
+Beware the ides of March.
+
+CLARENCE:
+What is your cousin and leave us to be
+To seek up thy father?
+
+BRAKENBURY:
+My lord of Buckingham, the benefit of God,
+When the beauty is the court of York,
+And thou stain'd in the king of 
+---------------
+Beware the ides of March.
+The common of Hereford, the noble duke,
+That we did be disanced, and all of him:
+But we were the sink of worthy blood,
+And therefore would wash the sovereign cause
+And take the cause of God and death
+---------------
+Beware the ides of March.
+
+DUKE OF YORK:
+The tender is much man a sceptre grief,
+That which is some palace to slow it me
+To return just and the truth that which have been them
+As the slaughter while I will dear them again.
+
+D
+---------------
+Beware the ides of March.
+
+SOMERSET:
+Sir, the body whereon we will not some writ.
+
+KING RICHARD III:
+We will say well and welcome to the sweet,
+And therefore say 'Richard our voices.'
+Cousin our treasons and we have been seen
+---------------
+Beware the ides of March.
+
+Second Murderer:
+Shall I will remember your marriage.
+
+Second Murderer:
+What, court hither?
+
+CLARENCE:
+God save your lord, I'll not wake it but as you.
+
+Second Murderer:
+The king and all the world a
+---------------
+Beware the ides of March.
+
+BUCKINGHAM:
+I have but the people of who he hath fought
+With scease and will be no sworn to be a king.
+
+LORD RICHARD II:
+The word of Wiltshire in the king down.
+
+KING RICHARD III:
+My lord, I am all 
+---------------

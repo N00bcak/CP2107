@@ -1,0 +1,1 @@
+python train.py --config config/train_shakespeare_char_modified.py
