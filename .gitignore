@@ -184,3 +184,4 @@ cython_debug/
 **/*.synctex.gz
 
 code/wk3/data
+wandb/
