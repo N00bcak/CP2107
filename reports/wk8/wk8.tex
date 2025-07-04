@@ -365,7 +365,7 @@ but never in a coherent manner. For example, it might generate sentences like:
 All these indicate that nanoGPT does not understand the meaning of the words it generates,
 and is simply regurgitating phrases it has seen in the training set.
 
-By contrast, the Qwen models mostly generated coherent sentences,
+By contrast, the Qwen models mostly generated cogent and natural sentences,
 and were on occasion even able to answer questions in a conversational manner (\cite{beh-2025-b}).
 
 \subsection{Discussion}
@@ -373,12 +373,17 @@ When analyzing the results side by side with the loss curves,
 it is quite clear that nanoGPT has somewhat learnt the structure of Shakespeare's works,
 as evidenced by the steady decrease in training and validation loss
 over the course of training. Nevertheless, it quite obviously and dismally fails 
-to generate coherent text.
+to generate text reminiscent of natural language as it is spoken/written today.
 
 Considering that nanoGPT is a relatively good implementation of the GPT architecture,
 and that manual inspections have yet to identify any glaring bugs in the model architecture
 and training loop, it is \textbf{likely that the model's failure to generate coherent text
-stems from the small size of the training set, and/or the small size of the model itself}.
+stems from}: 
+\begin{itemize}
+    \item the small size of the training set
+    \item the restricted domain of the training set (i.e. most of Shakespeare's works)
+    \item the small size of the model itself
+\end{itemize}
 
 \section{Conclusion}
 In this report, we have explored the pre-training process of a small language model
