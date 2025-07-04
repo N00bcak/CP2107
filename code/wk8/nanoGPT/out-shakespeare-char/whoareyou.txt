@@ -1,0 +1,132 @@
+Overriding: out_dir = out-shakespeare-char
+Overriding: num_samples = 10
+Overriding: start = Who are you?
+Overriding: max_new_tokens = 200
+Overriding: temperature = 0.6
+number of parameters: 9.46M
+Loading meta from data/shakespeare_char/meta.pkl...
+Who are you?
+
+CORIOLANUS:
+The course of the mistress are not the duke.
+
+SICINIUS:
+Not I will remember to late, ere you must be
+The men of the tribunes.
+
+BRUTUS:
+Why, then they were not will into die. I was
+The no
+---------------
+Who are you?
+
+GLOUCESTER:
+Alas, the cousin of my heart that are place,
+That I shall do this well my love to thee
+To speak our Clarence, and so revenge
+The end of him that I have did not see him;
+And therefore you
+---------------
+Who are you?
+
+SICINIUS:
+Pray, you must not be as in your arms.
+
+MENENIUS:
+Be it consul, and your best and for the great of
+Resolve your grace.
+
+BRUTUS:
+I should not be some lady with the city.
+
+BRUTUS:
+I have mad
+---------------
+Who are you?
+
+Second Murderer:
+What and so that we shall be desired on the maid?
+
+LADY ANNE:
+O my soul son, I have no seen to your grace;
+And I will say 'tis too much of the babe
+To shall be contempted.
+
+CLARENCE
+---------------
+Who are you?
+
+CLARENCE:
+What is your cousin?
+
+ARCHIDAMUS:
+Why, then, my lord,
+He that your mettle have been your lips,
+And swear that you have proved you to your hands;
+And you are not so out in the field,
+That e
+---------------
+Who are you?
+
+CORIOLANUS:
+Ay, as I cannot know.
+
+SICINIUS:
+What is this?
+
+CORIOLANUS:
+A guilty most man?
+
+Citizens:
+Sir, you have sentenced me for the day
+And shall be but a vengeance thing
+Of a little part in th
+---------------
+Who are you?
+
+DUKE VINCENTIO:
+I am not to much of him.
+
+ISABELLA:
+But you be with him that with him.
+
+LUCIO:
+O that I judge him with Master Of Claudio,
+Give him him; and where it was let him be himself
+Than to pr
+---------------
+Who are you?
+
+POLIXENES:
+My lord, be so no more than that you have been
+To see him from you.
+
+ANGELO:
+I do not, sir, my lord.
+
+POLIXENES:
+O, sir, I prithee, that shall be resolved
+The sight of his pardon and gent
+---------------
+Who are you?
+
+Second Murderer:
+Shall I will remember your hands and have dreams as id
+show to your hatred and hours, and the hard of your high
+show for the first I have prove it it in the like
+and all the world w
+---------------
+Who are you?
+
+MENENIUS:
+Who is the court?
+
+First Soldier:
+He is not so do not a word that with silence
+Begins him that she shall be the next of him.
+
+MENENIUS:
+And witness honour from Rome is great here.
+
+SICINIU
+---------------

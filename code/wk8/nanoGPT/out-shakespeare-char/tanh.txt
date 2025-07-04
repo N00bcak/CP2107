@@ -1,0 +1,116 @@
+Overriding: out_dir = out-shakespeare-char
+Overriding: num_samples = 10
+Overriding: start = What is the range of output of tanh?
+Overriding: max_new_tokens = 200
+Overriding: temperature = 0.6
+number of parameters: 9.46M
+Loading meta from data/shakespeare_char/meta.pkl...
+What is the range of output of tanh?
+
+CORIOLANUS:
+O, because you that seem of burnt me?
+
+CORIOLANUS:
+My lord, I will remember to late,
+But when I do not complain to the moon,
+And be the world to execute the city
+Still come to call the p
+---------------
+What is the range of output of tanh?
+
+GLOUCESTER:
+Alas, the court shall charge the case of words:
+The senators the very contempt to the lady,
+So the truth of the morning of heaven,
+And what they summer have rupt for their heads,
+They ha
+---------------
+What is the range of output of tanh?
+
+SICINIUS:
+Pray, you must not be as in the warden care
+To send upon my care to know the hands
+That know you know your services to me
+That we should not be some made well the city.
+
+BRUTUS:
+I have muc
+---------------
+What is the range of output of tanh?
+
+KING RICHARD II:
+What six of the city of York?
+
+ARCHBISHOP OF YORK:
+Let them know the season of his soul,
+And say 'Why look's king the side heir,'
+The queen his hands against the way soul.
+
+KING RIC
+---------------
+What is the range of output of tanh?
+
+CLARENCE:
+What is your cousin?
+
+ARCHIDAMUS:
+Why, then, my lord,
+The truth is my lord, I cannot be a crown,
+To subject and heart to help you to contempt them.
+
+CLARENCE:
+Such as you for Gloucester's 
+---------------
+What is the range of output of tanh?
+The condition of a princely consequerors,
+And therefore that I am not with such as seven,
+Such as is for worthy by the world things as we,
+As calm the gods should not be a sea
+To call the king begin 
+---------------
+What is the range of output of tanh?
+
+DUKE OF YORK:
+The letters will the sun sue of England's death.
+
+DUKE OF YORK:
+Why looks thou comest to the Duke of Norfolk?
+
+DUCHESS OF YORK:
+A thinker do believe the princely side.
+
+DUKE OF YORK:
+M
+---------------
+What is the range of output of tanh?
+
+SOMERSET:
+Sir, then I live, and we will not some writ.
+
+KING RICHARD III:
+We will say well as the earth of the writing.
+
+WARWICK:
+But I, then the king that ever the subjects strange.
+
+WARWICK:
+Edwar
+---------------
+What is the range of output of tanh?
+
+Second Murderer:
+So pardon the countrymen: the rood of York,
+I will give a happy from him more than wherein
+He had a little bloody by the thoughts of heaven,
+Who cause the glistoman of her accused w
+---------------
+What is the range of output of tanh?
+
+GLOUCESTER:
+I have but the people of what we would did sit,
+The army of my love I will receive the ground,
+That would thou canst not speak of fools,
+And that not for the king men to him.
+
+DUKE OF YO
+---------------
