@@ -137,14 +137,14 @@ which purportedly contains the complete works of William Shakespeare in a single
 To obtain tokens for training, 
 \begin{itemize}
     \item \texttt{data/shakespeare\_char/prepare.py} downloads this dataset,
-    \item records metadata about the dataset (like the vocabulary, etc.),
+    \item records metadata about the dataset (like the vocabulary, total token counts, etc.),
     \item splits the data (90\% train, 10\% validation) into training and validation sets,
     \item tokenizes each text block on a character level,
-    \item and saves both the training and validation sets to disk.
+    \item and saves both the (tokenized) training and validation corpuses to disk.
 \end{itemize}
 
-This creates a training dataset with $\sim$ 1M tokens (since there are $\sim$ 1M characters in the text),
-which is very small relative to traditional pre-training corpuses (\cite{beh-2025}).
+This creates a training dataset with $\sim$ 1M tokens (since there are $\sim$ 1.1M characters in the text),
+which is vanishingly small relative to traditional pre-training corpuses (\cite{beh-2025}).
 However, the small size also allows us to pre-train a small model in a reasonable amount of time,
 and to quickly iterate on the training process.
 
@@ -166,8 +166,11 @@ the GPT architecture (\cite{radford-et-al-2019}), which is itself
 a relatively simple decoder-only transformer (\cite{vaswani-et-al-2017}).
 Figure \ref{fig:nanogpt_architecture} shows the architecture of the model at a glance.
 
-Notably, the activation function used in the model is Gaussian Error Linear Unit (GELU) (\cite{gelu}),
+There are, however, two notable departures from the GPT architecture:
+\begin{itemize}
+    \item The activation function used in the model is Gaussian Error Linear Unit (GELU) (\cite{gelu}),
 rather than the more common ReLU or LeakyReLU (\cite{xu-et-al-2015, relu}).
+\end{itemize} 
 
 
 \subsection{Training Loop}
@@ -175,23 +178,44 @@ Corresponding File: \texttt{train.py}
 
 As mentioned in \cite{beh-2025}, language model pre-training
 is typically formulated as a self-supervised, next-token prediction task,
-and nanoGPT is no exception.
+and nanoGPT is no exception. Algorithm \ref{alg:nanogpt_training_loop} shows 
+provides a sketch of the training loop used in nanoGPT.
 
-In sum, the loop works as follows:
-\begin{itemize}
-    \item From the training tokens, extract contiguous blocks of tokens
-        with the same length as the model's context window.
-    \item For each block, create a corresponding target block
-        where the $n$-th token in the target block generally corresponds 
-        to the $(n+1)$-th token in the input block. 
-        In particular, the last token in the target block corresponds 
-        to the first token after the input block.
-    \item Feed the input block to the model to extract next-token logits
-        for each position in the block.
-    \item Using the target block as ground-truth, compute the average cross-entropy loss
-        between the model's logits and the target tokens across the block and across the batch.
-    \item Backpropagate the loss and update the model's parameters.
-\end{itemize}
+% In sum, the loop works as follows:
+% \begin{itemize}
+%     \item From the training tokens, extract contiguous blocks of tokens
+%         with the same length as the model's context window.
+%     \item For each block, create a corresponding target block
+%         where the $n$-th token in the target block generally corresponds 
+%         to the $(n+1)$-th token in the input block. 
+%         In particular, the last token in the target block corresponds 
+%         to the first token after the input block.
+%     \item Feed the input block to the model to extract next-token logits
+%         for each position in the block.
+%     \item Using the target block as ground-truth, compute the average cross-entropy loss
+%         between the model's logits and the target tokens across the sequence and batch dimensions
+%     \item Backpropagate the loss and update the model's parameters.
+% \end{itemize}
+
+\begin{algorithm}[H]
+\caption{nanoGPT Training Loop (Next-Token Prediction)}
+\begin{algorithmic}[1]
+\Require Training corpus $\mathcal{T} = [t_1, t_2, \ldots, t_N]$, context window size $C$, batch size $B$, Model parameters $\theta$
+% \algorithmicreturn~ $\theta$ after training
+\While{not converged}
+    \State Sample $B$ indices $\{s_1, \ldots, s_B\}$ uniformly at random such that $\forall b (s_b + C \leq N)$
+    \For{$b = 1$ to $B$}
+        \State $\mathbf{x}^{(b)} \gets [t_{s_b}, t_{s_b+1}, \ldots, t_{s_b+C-1}]$ \Comment{Input block}
+        \State $\mathbf{y}^{(b)} \gets [t_{s_b+1}, t_{s_b+2}, \ldots, t_{s_b+C}]$ \Comment{Target block (shifted by 1)}
+    \EndFor
+    \State Stack $\{\mathbf{x}^{(b)}\}_{b=1}^B$ into input batch $\mathbf{X} \in \mathbb{N}^{B \times C}$
+    \State Stack $\{\mathbf{y}^{(b)}\}_{b=1}^B$ into target batch $\mathbf{Y} \in \mathbb{N}^{B \times C}$
+    \State Compute logits $\mathbf{L} = \mathrm{Model}(\mathbf{X}) \in \mathbb{R}^{B \times C \times V}$, where $V$ is vocab size
+    \State Compute loss $\mathcal{L} = \mathrm{CrossEntropy}(\mathbf{L}, \mathbf{Y})$ (averaged over batch and sequence)
+    \State Backpropagate $\mathcal{L}$ and update $\theta$
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Evaluation Loop}
 Corresponding File: \texttt{evaluate.py}
@@ -310,7 +334,7 @@ where each line starts with a capital letter, without fail.
 However, any similarities appear to be textual, and indeed quite superficial in nature,
 as the model \textit{frequently repeats the same interlocutors' names} in the generated text,
 and notably \textit{does not understand the iambic pentameter} structure in which Shakespeare's 
-works are written. Take for example,
+works are written. Take for example, this contiguous piece of dialogue generated by nanoGPT:
 \begin{quote}
 DUKE OF YORK:
 
@@ -381,57 +405,21 @@ and the importance of large datasets and model sizes in achieving good performan
 Examining the source code, we find that the \texttt{CasualSelfAttention}
 module is designed to project embedding tokens in parallel (line 56).
 
-% ```
-
-%     def forward(self, x):
-%         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
-
-%         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-%         q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
-%         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-%         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-%         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-
-%         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-%         if self.flash:
-%             # efficient attention using Flash Attention CUDA kernels
-%             y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
-%         else:
-%             # manual implementation of attention
-%             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-%             att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
-% ```
-
-% Before applying masking, the attention matrix is computed by taking the 
-% dot product between the Query and Key representations for every possible 
-% pair of positions in the input sequence. This results in a square matrix 
-% of size $T \times T$ , where each entry (i, j) represents how much the i-th token 
-% (as a Query) attends to the j-th token (as a Key).
-
-% If you truncate the Query sequence to its first s tokens and the Key 
-% sequence to its first t tokens, the new attention matrix is simply the 
-% top-left $s \times t$ rectangle of the original attention matrix. This is 
-% because the attention score between any Query i and Key j only depends 
-% on their respective representations, so removing tokens just removes the 
-% corresponding rows (for Queries) and columns (for Keys) from the original
-% matrix.
-
-% In other words, truncating the sequences is equivalent to slicing out 
-% the relevant submatrix from the original attention matrix before masking 
-% is applied.
-
+Moreover, due to the theorem below, the casual self-attention matrix 
+is invariant to the suffix of the input sequence:
 
 \begin{theorem}[Causal Attention Prefix Invariance]
-Let $\mathbf{X} = [\mathbf{x}_1, \mathbf{x}_2, \ldots, \mathbf{x}_n] \in \mathbb{R}^{n \times d}$ be a sequence of token embeddings, and let $\mathbf{W}_Q, \mathbf{W}_K \in \mathbb{R}^{d \times d_k}$ be the query and key projection matrices for a self-attention head.
+Let $\mathbf{X} = (\mathbf{x}_1 | \mathbf{x}_2 | \ldots | \mathbf{x}_n) \in \mathbb{R}^{d \times n}$ be a sequence of token embeddings, 
+and let $\mathbf{W}_Q, \mathbf{W}_K \in \mathbb{R}^{d_{att} \times d}$ be the query and key projection matrices for a self-attention head.
 
 Define the masked attention scores as 
 \begin{equation}
-    \mathbf{B}(\mathbf{X}) = softmax(\mathbf{A}(\mathbf{X}), dim = -1)
+\mathbf{B}(\mathbf{X})_{ij} = \frac{\exp(\mathbf{A}(\mathbf{X})_{ij})}{\sum_{k=1}^{n} \exp(\mathbf{A}(\mathbf{X})_{ik})}
 \end{equation}
 
 where $\mathbf{A}(\mathbf{X})_{ij} = 
 \begin{cases}
-    \frac{(\mathbf{W}_Q \mathbf{x}_i)^T (\mathbf{W}_K \mathbf{x}_j)}{\sqrt{d_k}} & \text{if } j \leq i \\
+    \frac{(\mathbf{W}_Q \mathbf{x}_i)^T (\mathbf{W}_K \mathbf{x}_j)}{\sqrt{d_{att}}} & \text{if } j \leq i \\
     -\infty & \text{if } j > i
 \end{cases}$
 
@@ -439,38 +427,55 @@ Then for any prefix length $m < n$, $\mathbf{B}(\mathbf{X})_{1:m,1:m} = \mathbf{
 \end{theorem}
 
 \begin{proof}
-    Notice that 
-    $$\begin{array}{rl}
-       \mathbf{A}(\mathbf{X}_{1:m})_{ij} &= 
-        \begin{cases}
-            \frac{(\mathbf{W}_Q \mathbf{x}_i)^T (\mathbf{W}_K \mathbf{x}_j)}{\sqrt{d_k}} & \text{if } 1 \leq j \leq i \leq m \\
-            -\infty & \text{otherwise}
-        \end{cases} \\
-        & = 
-        \begin{cases}
-            \mathbf{A}(\mathbf{X})_{ij} & \text{if } 1 \leq j \leq i \leq m \\
-            -\infty & \text{otherwise}
-        \end{cases} \\
-        & = \mathbf{A}(\mathbf{X})_{1:m, 1:m}
-    \end{array}$$
+    % Notice that 
+    % $$\begin{array}{rl}
+    %    \mathbf{A}(\mathbf{X}_{1:m})_{ij} &= 
+    %     \begin{cases}
+    %         \frac{(\mathbf{W}_Q \mathbf{x}_i)^T (\mathbf{W}_K \mathbf{x}_j)}{\sqrt{d_{att}}} & \text{if } 1 \leq j \leq i \leq m \\
+    %         -\infty & \text{otherwise}
+    %     \end{cases} \\
+    %     & = 
+    %     \begin{cases}
+    %         \mathbf{A}(\mathbf{X})_{ij} & \text{if } 1 \leq j \leq i \leq m \\
+    %         -\infty & \text{otherwise}
+    %     \end{cases} \\
+    %     & = \mathbf{A}(\mathbf{X})_{1:m, 1:m}
+    % \end{array}$$
+
+
+    Since $i \leq m$, all positions $k \leq i$ are within the prefix $\mathbf{X}_{1:m}$. Therefore:
+    \begin{equation}
+        \mathbf{A}(\mathbf{X})_{ij} = \mathbf{A}(\mathbf{X}_{1:m})_{ij} \quad \text{for all } j \leq i \leq m
+    \end{equation}
 
     Since we conduct softmax over the last dimension we only care about the case when $j > m$ but $i \leq m$.
     Here, naturally $j > i$.
     Hence, we have
-    $$\begin{array}{rl}
-        \mathbf{B}(\mathbf{X})_{1:m, 1:m} &= softmax(\mathbf{A}(\mathbf{X})_{1:m, 1:m}, dim = -1) \\
-        & = softmax(\mathbf{A}(\mathbf{X}_{1:m}), dim = -1) \\
-        & = \left( \begin{array}{c|c}
-            \mathbf{B}(\mathbf{X}_{1:m}) & \mathbf{0} \\ \hline
-            \mathbf{0} & \mathbf{0}
-        \end{array}\right)_{1:m, 1:m} \\
-        & = \mathbf{B}(\mathbf{X}_{1:m})
-    \end{array}$$
+    % $$\begin{array}{rl}
+    %     \mathbf{B}(\mathbf{X})_{1:m, 1:m} &= softmax(\mathbf{A}(\mathbf{X})_{1:m, 1:m}, dim = -1) \\
+    %     & = softmax(\mathbf{A}(\mathbf{X}_{1:m}), dim = -1) \\
+    %     & = \left( \begin{array}{c|c}
+    %         \mathbf{B}(\mathbf{X}_{1:m}) & \mathbf{0} \\ \hline
+    %         \mathbf{0} & \mathbf{0}
+    %     \end{array}\right)_{1:m, 1:m} \\
+    %     & = \mathbf{B}(\mathbf{X}_{1:m})
+    % \end{array}$$
+
+    \begin{align*}
+        \mathbf{B}(\mathbf{X})_{ij} &= \frac{\exp(\mathbf{A}(\mathbf{X})_{ij})}{\sum_{k=1}^{n} \exp(\mathbf{A}(\mathbf{X})_{ik})} \\
+        &= \frac{\exp(\mathbf{A}(\mathbf{X}_{1:m})_{ij})}{\sum_{k=1}^{m} \exp(\mathbf{A}(\mathbf{X}_{1:m})_{ik})} \\
+        &= \mathbf{B}(\mathbf{X}_{1:m})_{ij}
+    \end{align*}
 
 \end{proof}
 
 As such, it does not matter how much of the model's context window is used
-to generate the next token, since the relevant block of the attention matrix
-remains the same regardless of what the suffix to the input sequence is.
+to generate the next token. If I had any $m < n$ for a sequence length $n$, 
+the top left $m \times m$ block of the causal attention matrix would be the same 
+as the causal attention matrix calculated using only the first $m$ tokens
+of the sequence.
+
+To reiterate, nanoGPT will be able to autoregressively generate text
+just fine, even if the prompt is not a full block of tokens.
 
 \end{document}
