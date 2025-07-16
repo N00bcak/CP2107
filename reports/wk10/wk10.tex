@@ -1,0 +1,80 @@
+\documentclass{article} % For LaTeX2e
+\usepackage[final]{../colm2025_conference}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage{booktabs}
+\usepackage{soul}
+\usepackage{cancel}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{tablefootnote}
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}[section]
+% \newtheorem{proof}{Proof}[section]
+
+\usepackage{lineno}
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+
+\title{Week 10: Deep Dive into RLVR with nano-aha-moment}
+
+\author{\textbf{BEH} Chuen Yang}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\begin{document}
+
+\ifcolmsubmission
+\linenumbers
+\fi
+
+\maketitle
+% Starting from this week, we are going to learn the most fun part of this project - conducting RL on LLM by yourselves! Note that you will need a GPU to do this, and if you encounter any difficulty please feel free to DM me (asap) and we will see how to solve the compute resource issue. I would expect the experiment to be run on a single GPU.
+% - Step 0: Dive into this notebook deeply, and understand its content: https://github.com/McGill-NLP/nano-aha-moment/blob/main/nano_r1.ipynb
+%     - Basically it applies GRPO, the RL algorithm used in DeepSeek-R1, to train a Qwen model on a task called countdown.
+% - Step 1: Run the code and get some preliminary experiment results.
+%     - Note: Instead of using 3B model, try 0.5B model first (so you do not need a GPU with large vRAM)
+% - Step 2: Now, we will do the most challenging part in this project (so far).
+%     - Adapt the code to train on the task of GSM8K - a grade school level math problem dataset.
+%         - You can train qwen2.5-0.5b model first, scale up if your compute allows
+%         - Dataset available here: https://huggingface.co/datasets/axon-rl/GSM-8k
+%         - You need to change PROMPT_TEMPLATE accordingly because now we are dealing with another task (solving the math problem)
+%         - You also need to change equation_reward_func because now we have different ways to grade the answer correctness: you can simply use string matching (because GSM8K data’s answer is simple) or you can use a more general grader (https://github.com/huggingface/Math-Verify)
+% - Step 3: Write a report to summarize: the problem formulation, the method you take (GRPO’s equation, how to do the RL process), and the results you obtained.
+%         - Suggestion: finish step 0-1 in one week and step 2-3 in another.
+% - Final note: this assignment will take a 25% score in total as a combined assignment of week 10 - 11.
+
+\begin{abstract}
+    This report explores the use of RLVR for base model post-training in two parts.
+    Firstly, we explore how RLVR is implemented in the nano-aha-moment repository, 
+    which applies the GRPO algorithm to train a Qwen model on a task called countdown.
+    Secondly, we adapt the code to train on the GSM8K dataset, a grade school level math problem dataset.
+    We modify the prompt template and the equation reward function to suit the GSM8K task.
+    The results show that the adapted model can effectively solve grade school level math problems.
+\end{abstract}
+
+\section{Introduction}
+
+Apparently continuing in the nanoGPT (\cite{Karpathy-2022}) tradition,
+the nano-aha-moment repository provides a minimalistic implementation of RLVR (Reinforcement Learning with Verifiable Rewards) in the R1-Zero fashion
+for base language model post-training.
+
+
+
+\bibliographystyle{../colm2025_conference}
+\bibliography{wk10}
+
+\end{document}
