@@ -33,6 +33,9 @@ from utils import (
 )
 
 os.environ["VLLM_USE_V1"] = "0"
+# I distinctly remember that device 0 actually points to the 4090...
+VISIBLE_DEVICES = [0, 1, 2, 3, 4]
+os.environ["CUDA_VISIBLE_DEVICES"] = ', '.join(map(str, VISIBLE_DEVICES))
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -620,7 +623,7 @@ def compute_pg_loss(
 
     with torch.no_grad():
         entropy = -logps.sum() / labels_mask.sum()  # scalar
-        zero_advantages = close_to_zero(advantages, labels_mask)  # scalar
+        zero_advantages = close_to_zero(advantages[..., 1:], labels_mask)  # scalar
 
     policy_loss = -logps * advantages[..., 1:]  # [batch_size, seq_len-1]
     policy_loss = policy_loss * labels_mask  # [batch_size, seq_len-1]
@@ -644,8 +647,18 @@ def main(rank: int):
     # rank = int(os.environ.get("RANK", "0"))
     nproc = int(os.environ.get("WORLD_SIZE", "1"))
     nproc = args.nproc
-    initialize_training_process_group(rank, nproc)
-    curr_cuda_device = torch.device("cuda")
+    if not len(VISIBLE_DEVICES):
+        raise ValueError("No visible devices specified. Set CUDA_VISIBLE_DEVICES environment variable.")
+    if rank >= len(VISIBLE_DEVICES):
+        raise ValueError(f"Rank {rank} exceeds the number of visible devices: {len(VISIBLE_DEVICES)}")
+    
+    initialize_training_process_group(rank, nproc, VISIBLE_DEVICES[rank])
+    curr_cuda_device = torch.device(f"cuda:{VISIBLE_DEVICES[rank]}")
+    torch.cuda.set_device(curr_cuda_device)
+    print(f"Current CUDA device set to: {curr_cuda_device}")
+
+    # Safety measure: change rank.
+    os.environ["LOCAL_RANK"] = str(VISIBLE_DEVICES[rank])
 
     # Disable logging for non-main processes to avoid duplicate logs
     if dist.get_rank() != 0:
@@ -729,7 +742,7 @@ def main(rank: int):
         RUN_NAME = f"{model_name_short}_temp{TEMPERATURE}_kl{KL_COEFFICIENT}_lr{LEARNING_RATE}_al{args.algorithm}"
     else:
         RUN_NAME = args.run_id
-    EXP_DIR = Path.home() / "scratch" / "nano_aha_moment" / RUN_NAME
+    EXP_DIR = Path("nano_aha_moment", RUN_NAME)
     EXP_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Logs and Checkpoints will be saved to: {EXP_DIR}")
@@ -815,6 +828,8 @@ def main(rank: int):
         model=reference_model,
         config=ref_deepspeed_config,
     )
+    assert policy_model.device == curr_cuda_device, f"Policy model is not on the current device {curr_cuda_device}"
+    assert reference_model.device == curr_cuda_device, f"Reference model is not on the current device {curr_cuda_device}"
 
     reference_model.module.cpu()
     dist.barrier(device_ids=[torch.cuda.current_device()])
@@ -840,7 +855,8 @@ def main(rank: int):
         dtype=torch.bfloat16,
         max_model_len=MAX_RESPONSE_TOKENS + 1024,
         enable_sleep_mode=True,
-        device=f"cuda:{torch.cuda.current_device()}",
+        # device=f"cuda:{torch.cuda.current_device()}",
+        device=torch.cuda.current_device(),
         tensor_parallel_size=1,
     )
     if args.algorithm == "vineppo":

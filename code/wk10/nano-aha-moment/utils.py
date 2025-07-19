@@ -390,7 +390,7 @@ def load_model_into_vllm(model: Union[DeepSpeedEngine, PreTrainedModel], llm: LL
     llm.llm_engine.model_executor.driver_worker.model_runner.model.load_weights(state_dict.items())
 
 
-def initialize_training_process_group(rank: int, world_size: int):
+def initialize_training_process_group(rank: int, world_size: int, device_id: Optional[int] = None) -> None:
     """
     Initialize the PyTorch distributed process group for multi-GPU training using NCCL backend.
 
@@ -414,7 +414,10 @@ def initialize_training_process_group(rank: int, world_size: int):
     os.environ["LOCAL_RANK"] = str(rank)
     # os.environ["WORLD_SIZE"] = str(world_size)
 
-    torch.cuda.set_device(rank)
+    if device_id is not None:
+        torch.cuda.set_device(device_id)
+    else:
+        torch.cuda.set_device(rank)
 
     if rank == 0:
         print(
