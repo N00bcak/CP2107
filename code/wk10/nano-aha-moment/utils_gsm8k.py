@@ -14,13 +14,14 @@ from deepspeed import DeepSpeedEngine
 from transformers import AutoTokenizer, PreTrainedModel
 from vllm import LLM, SamplingParams
 
-DEFAULT_SYSTEM_MESSAGE = "You are a helpful assistant. You first think about the reasoning process in the mind and then provide the user with the answer."
-DEFAULT_PROMPT_TEMPLATE = "Using the numbers {numbers}, create an equation that equals {target}. You can use basic arithmetic operations (+, -, *, /) and each number can only be used once. Show your work in <think> </think> tags. And return the final equation and answer in <answer> </answer> tags, for example <answer>(1 + 2) / (3 * 5)</answer>."
+DEFAULT_SYSTEM_MESSAGE = "You are a helpful assistant who gives accurate answers. To do so, you write your reasoning steps meticulously and check any calculations or reasoning before giving your final answer."
+DEFAULT_PROMPT_TEMPLATE = "{problem} Show your work in <think> </think> tags, and return the final answer as a single number in <answer> </answer> tags, for example <answer>5</answer>."
 
 
 def create_prompt(
-    numbers: List[int],
-    target: int,
+    # numbers: List[int],
+    # target: int,
+    problem: str,
     tokenizer: AutoTokenizer,
     system_message: str = DEFAULT_SYSTEM_MESSAGE,
     prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
@@ -29,7 +30,7 @@ def create_prompt(
         {"role": "system", "content": system_message},
         {
             "role": "user",
-            "content": prompt_template.format(numbers=numbers, target=target),
+            "content": prompt_template.format(problem=problem),
         },
         {"role": "assistant", "content": "Let me solve this step by step.\n<think>"},
     ]
@@ -408,7 +409,7 @@ def initialize_training_process_group(rank: int, world_size: int, device_id: Opt
         - A timeout of 1800 seconds (30 minutes) is set for process group initialization
     """
     master_addr = "localhost"
-    master_training_port = 8237
+    master_training_port = 8238
 
     # os.environ["RANK"] = str(rank)
     os.environ["LOCAL_RANK"] = str(rank)

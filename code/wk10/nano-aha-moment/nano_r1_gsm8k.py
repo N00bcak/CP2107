@@ -19,7 +19,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel
 from vllm import LLM, CompletionOutput, RequestOutput, SamplingParams
 
 import wandb
-from utils import (
+from utils_gsm8k import (
     clean_up_checkpoints,
     close_to_zero,
     compute_token_log_probs,
@@ -34,8 +34,10 @@ from utils import (
 
 os.environ["VLLM_USE_V1"] = "0"
 # I distinctly remember that device 0 actually points to the 4090...
-VISIBLE_DEVICES = [0]
+VISIBLE_DEVICES = [1]
 os.environ["CUDA_VISIBLE_DEVICES"] = ', '.join(map(str, VISIBLE_DEVICES))
+# VISIBLE_DEVICES = list(map(int, os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")))
+# print(f"Using CUDA_VISIBLE_DEVICES: {VISIBLE_DEVICES}")
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -71,14 +73,15 @@ def preprocess_example(
     SYSTEM_MESSAGE: str,
     PROMPT_TEMPLATE: str,
 ):
-    numbers: List[int] = example["nums"]
-    target: int = example["target"]
+    # numbers: List[int] = example["nums"]
+    # target: int = example["target"]
+    problem = example["problem"]
 
     prefix = [
         {"role": "system", "content": SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": PROMPT_TEMPLATE.format(numbers=numbers, target=target),
+            "content": PROMPT_TEMPLATE.format(problem=problem),
         },
         {"role": "assistant", "content": "Let me solve this step by step.\n<think>"},
     ]
@@ -102,7 +105,8 @@ def format_reward_func(completion: str, EOS_TOKEN: str) -> float:
         float: Reward score
     """
     # Define the allowed pattern (only numbers, +, -, *, /, (, ), ., and whitespace)
-    allowed_pattern = r"^[\d+\-*/().\s]+$"
+    # allowed_pattern = r"^[\d+\-*/().\s]+$"
+    allowed_pattern = r"^-?[\d]+$"  # Numbers-like (i.e. may be negative)
 
     try:
         # Synthetically prepend <think> (if your pipeline relies on that to ease matching)
@@ -119,8 +123,6 @@ def format_reward_func(completion: str, EOS_TOKEN: str) -> float:
         # 3) <answer>...anything...</answer>
         regex = r"^<think>([^<]*(?:<(?!/?think>)[^<]*)*)<\/think>\n<answer>([\s\S]*?)<\/answer>$"
         match = re.search(regex, completion, re.DOTALL)
-        # if "</think>\n<answer>" in completion:
-        #     print(f"{match.groups() if match is not None else 'No match found'}")
 
         if match is None or len(match.groups()) != 2:
             # Format is incorrect
@@ -128,6 +130,7 @@ def format_reward_func(completion: str, EOS_TOKEN: str) -> float:
         else:
             # Extract the content inside <answer>...</answer>
             answer_content = match.group(2).strip()
+            answer_content = answer_content.replace(",", "")  # Normalize commas.
 
             # Check if answer content matches the allowed pattern
             if not re.match(allowed_pattern, answer_content):
@@ -136,12 +139,55 @@ def format_reward_func(completion: str, EOS_TOKEN: str) -> float:
             else:
                 # If both format and pattern are correct, reward is 1
                 return 1.0
-    except Exception: # POKEMON! GOTTA CATCH 'EM ALL!
-        # Can't find? zero reward.
+    except Exception:
+        # Any error leads to 0 reward
         return 0.0
 
 
-def equation_reward_func(completion: str, nums: List[int], target: int) -> float:
+# def equation_reward_func(completion: str, nums: List[int], target: int) -> float:
+#     """
+#     Evaluates completion based on mathematical correctness of the answer
+
+#     Args:
+#         completion (str): Generated output
+#         target (str): Expected answer
+#         nums (list): Available numbers to use in the equation
+
+#     Returns:
+#         float: Reward score
+#     """
+#     try:
+#         # add synthetic <think> as its already part of the prompt and prefilled for the assistant to more easily match the regex
+#         completion = "<think>" + completion
+#         # Check if the format is correct
+#         match = re.search(r"<answer>(.*?)<\/answer>", completion)
+#         if match is None:
+#             return 0.0
+#         # Extract the "answer" part from the completion
+#         equation = match.group(1).strip()
+#         # Extract all numbers from the equation
+#         used_numbers = [int(n) for n in re.findall(r"\d+", equation)]
+
+#         # Check if all numbers are used exactly once
+#         if sorted(used_numbers) != sorted(nums):
+#             return 0.0
+#         # Define a regex pattern that only allows numbers, operators, parentheses, and whitespace
+#         allowed_pattern = r"^[\d+\-*/().\s]+$"
+#         if not re.match(allowed_pattern, equation):
+#             return 0.0
+
+#         # Evaluate the equation with restricted globals and locals
+#         result = eval(equation, {"__builtins__": None}, {})
+#         # Check if the equation is correct and matches the ground truth
+#         if abs(float(result) - float(target)) < 1e-5:
+#             return 1.0
+#         else:
+#             return 0.0
+#     except Exception:
+#         # If evaluation fails, reward is 0
+#         return 0.0
+
+def equation_reward_func(completion: str, target: str) -> float:
     """
     Evaluates completion based on mathematical correctness of the answer
 
@@ -161,22 +207,13 @@ def equation_reward_func(completion: str, nums: List[int], target: int) -> float
         if match is None:
             return 0.0
         # Extract the "answer" part from the completion
-        equation = match.group(1).strip()
-        # Extract all numbers from the equation
-        used_numbers = [int(n) for n in re.findall(r"\d+", equation)]
+        ans = match.group(1).strip()
 
-        # Check if all numbers are used exactly once
-        if sorted(used_numbers) != sorted(nums):
-            return 0.0
-        # Define a regex pattern that only allows numbers, operators, parentheses, and whitespace
-        allowed_pattern = r"^[\d+\-*/().\s]+$"
-        if not re.match(allowed_pattern, equation):
-            return 0.0
+        # Sometimes the target contains commas. That seems to be the only undesirable gunk.
+        target = target.strip().replace(",", "")
 
-        # Evaluate the equation with restricted globals and locals
-        result = eval(equation, {"__builtins__": None}, {})
         # Check if the equation is correct and matches the ground truth
-        if abs(float(result) - float(target)) < 1e-5:
+        if abs(float(ans) - float(target)) < 1e-5:
             return 1.0
         else:
             return 0.0
@@ -186,11 +223,11 @@ def equation_reward_func(completion: str, nums: List[int], target: int) -> float
 
 
 def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
-    nums = sample["nums"]
-    target = sample["target"]
-
+    # nums = sample["nums"]
+    target = sample["answer"][0] # Seems to be a list with a single element
+    
     format_reward = format_reward_func(completion, EOS_TOKEN)
-    equation_reward = equation_reward_func(completion=completion, nums=nums, target=target)
+    equation_reward = equation_reward_func(completion=completion, target=target)
 
     reward = format_reward + equation_reward
 
@@ -745,10 +782,10 @@ def main(rank: int):
 
     model_name_short = MODEL_NAME.split("/")[-1]
     if args.run_id is None:
-        RUN_NAME = f"{model_name_short}_temp{TEMPERATURE}_kl{KL_COEFFICIENT}_lr{LEARNING_RATE}_al{args.algorithm}_gps{GENERATIONS_PER_SAMPLE}_mrt{MAX_RESPONSE_TOKENS}_eps{EPISODES_PER_ITERATION}"
+        RUN_NAME = f"{model_name_short}_temp{TEMPERATURE}_kl{KL_COEFFICIENT}_lr{LEARNING_RATE}_al{args.algorithm}"
     else:
         RUN_NAME = args.run_id
-    EXP_DIR = Path("nano_aha_moment", RUN_NAME)
+    EXP_DIR = Path("nano_aha_moment_gsm8k", RUN_NAME)
     EXP_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Logs and Checkpoints will be saved to: {EXP_DIR}")
@@ -758,21 +795,23 @@ def main(rank: int):
     ############################################
 
     SYSTEM_MESSAGE = (
-        "You are a helpful assistant. You first think about the reasoning process in the mind "
-        "and then provide the user with the answer."
+        "You are a helpful assistant who gives accurate answers. To do so, "
+        "you write your reasoning steps meticulously and check any calculations or reasoning " 
+        "before giving your final answer."
     )
     PROMPT_TEMPLATE = (
-        "Using the numbers {numbers}, create an equation that equals {target}. "
-        "You can use basic arithmetic operations (+, -, *, /) and each number can only be used once. "
-        "Show your work in <think> </think> tags. And return the final equation and answer in "
-        "<answer> </answer> tags, for example <answer>(1 + 2) / (3 * 5)</answer>."
+        "{problem} Show your work in <think> </think> tags, and return the final " 
+        "answer as a single number in <answer> </answer> tags, for example <answer>5</answer>, "
+        "not <answer>the answer is 5</answer>."
     )
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     EOS_TOKEN_ID = tokenizer.eos_token_id
     EOS_TOKEN = tokenizer.convert_ids_to_tokens(EOS_TOKEN_ID)
+    print(f"EOS token: {EOS_TOKEN}")
 
-    dataset = load_dataset("Jiayi-Pan/Countdown-Tasks-3to4", split="train")
+    # dataset = load_dataset("Jiayi-Pan/Countdown-Tasks-3to4", split="train")
+    dataset = load_dataset("axon-rl/GSM-8k", split="train")
     # Rank 0 will preprocess the dataset first
     if dist.get_rank() != 0:
         # Other ranks will wait for rank 0 to enter the barrier
@@ -875,7 +914,7 @@ def main(rank: int):
     # Wandb for logging. Only rank 0 will initialize wandb
     if dist.get_rank() == 0:
         wandb.init(
-            project="nano-aha-moment",
+            project="nano-aha-moment-gsm8k",
             name=RUN_NAME,
             resume="allow",
             config={
@@ -1156,7 +1195,7 @@ def main(rank: int):
                 tokenizer.save_pretrained(str(ckpt_dir / "hf_model"))
             dist.barrier(device_ids=[torch.cuda.current_device()])
 
-            # Waste of space. Don't save deepspeed checkpoint
+            # Don't save DeepSpeed checkpoint. Waste of space.
             # logger.info("Saving DeepSpeed checkpoint")
             # policy_model.save_checkpoint(str(ckpt_dir / "deepspeed"))
 
@@ -1172,8 +1211,11 @@ def main(rank: int):
 
 
 if __name__ == "__main__":
-    torch.multiprocessing.set_start_method('spawn', force = True)
+    torch.multiprocessing.set_start_method("spawn", force=True)
     args = arg_parser.parse_args()
+
+    # Perform testing on the equation and function reward
+    
 
     n_gpus = torch.cuda.device_count()
     if args.nproc > n_gpus:
