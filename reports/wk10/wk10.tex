@@ -151,7 +151,8 @@ algorithm (\cite{grpo}) used in R1-Zero (\cite{r1}).
 
 \subsection{GRPO vs PPO}
 Consider a policy network $\pi_\theta$ and critic network $V_\phi$ in a single-state,
-single-action armed bandit environment with state $s$ and action $a = (o_1, \dots, o_n)$,
+single-action armed bandit environment (\cite{Sutton-and-Barto-1998, contextualbandit}) 
+with state $s$ and action $a = (o_1, \dots, o_n)$,
 where $o_k$ is the $k$-th output token of the language model.
 
 Both PPO and GRPO (\cite{ppo, grpo}) maximize this objective function\footnote{
