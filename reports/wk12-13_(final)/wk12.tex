@@ -1,0 +1,161 @@
+\documentclass{article} % For LaTeX2e
+\usepackage[final]{../colm2025_conference}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage{booktabs}
+\usepackage{soul}
+\usepackage{cancel}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{tablefootnote}
+\usepackage{multicol}
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}[section]
+% \newtheorem{proof}{Proof}[section]
+
+\usepackage{lineno}
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+
+\title{Week 12: Final Summary of RLVR}
+
+\author{\textbf{BEH} Chuen Yang}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\begin{document}
+
+\ifcolmsubmission
+\linenumbers
+\fi
+
+\maketitle
+% - Congrats on finishing the LLM RL training and implementing your own task!
+% - In the final two weeks, let’s explore a little bit more on LLM RL and wrap up this project in a report.
+% (week 12, you can finish the coding and experiments without writing the report; you can put the results in the final report) 
+% Continuing the GSM8k task, let’s consider another reward function. 
+% Now we not only want the LLM output formatted and correct answer, we also want the answer to be as short / concise as possible. 
+% Design the reward function, run the experiments, and compare with your old runs with analysis.
+
+% - Lastly, write a final report for the WHOLE project. Make it short (<= 5 pages without references). 
+% Make it comprehensive (include introduction, method, experiments, and conclusion;
+% mirror a research paper that you read.).
+%  A tip is that you can copy-paste from your previous report about the RL equations, LLM basics and so on, and summarize them in a concise way.
+% Please include the experimental results of week 12 in the report.
+% There’s no need to submit at the end of week 12; you can submit the code and final report at the end of week 13.
+
+\begin{abstract}
+    This final report summarizes the work done throughout the past weeks on Reinforcement Learning (RL), Large Language Models (LLMs),
+    and RL with Verifiable Rewards (RLVR) in LLMs.
+    Leaving the intermediate work aside, this report presents most of the key results and findings from all weeks of the project.
+    We hope the report serves as a good roadmap for understanding RLVR and how it can be implemented in LLMs.
+\end{abstract}
+
+\section{Introduction}
+Large Language Models (LLMs) have long been demonstrated capable of performing a staggering variety of tasks
+in the Natural Language Processing (NLP) domain, ranging from text generation, 
+sentiment analysis, to machine translation, question answering (\cite{Brown-et-al-2020}),
+and in recent years, even complex reasoning tasks (\cite{tulu3, GRPO, r1}).
+
+It goes without saying, then, that being able to peer behind the curtain of such a powerful
+and apparently generalized model will be a fascinating endeavor. By gaining a deeper
+and more minute understanding of how LLMs work, what they are capable of,
+and what their limitations are, we will be able to harness their power
+in more suitable and effective ways, and even expand the boundaries 
+of what is possible with deep learning in general.
+
+In this brief paper, we present an executive summary of the prerequisite background
+in Reinforcement Learning (RL) and LLMs, highlighting key concepts and findings from our work \footnote{
+    These works will not be cited in-line for brevity,
+    but can be found in the references section at the end of this report.
+    The reader should keep in mind that the previous works serve as the foundation
+    for the current report, and can be referenced for more in-depth treatments
+    of their respective topics.
+},
+and progressively \textit{build up to a high-level overview of RL with Verifiable Rewards (RLVR) in LLMs},
+which is the main focus of this report.
+We supplement our descriptions and theorywork with experimental results
+from past weeks, in order to scaffold a more comprehensive understanding
+of how RL, LLM training, and RLVR work in practice, as well as how and where
+they may fall short.
+
+\section{Background}
+\subsection{LLMs}
+
+
+
+\subsection{RL}
+
+In the general case, RL is a machine learning paradigm
+where an agent learns to make a sequence of \textit{actions} or \textit{decisions} 
+in an \textit{environment} in order to maximize an \textit{objective} 
+(whose utility is defined by a cumulative reward signal) (\cite{Sutton-and-Barto-1998}).
+
+\subsubsection{RL Problems as Markov Decision Processes (MDPs)}
+
+Most commonly, RL problems are formulated as MDPs
+(\cite{SpinningUp-2018, Levine-et-al-2023, Sutton-and-Barto-1998})
+by \textit{assuming the Markov property}, where environment dynamics
+can only depend on the current state and action, and not on past states or actions (\cite{Sutton-and-Barto-1998}).
+
+This \textit{Markov assumption} is \textbf{key} to 
+enabling the theoretical performance guarantees of many RL algorithms (\cite{Sutton-and-Barto-1998}).
+Formally speaking, an MDP is defined as a tuple $(\mathcal{S}, \mathcal{A}, \tau, r, \gamma)$, 
+where 
+
+\begin{itemize}
+    \item $\mathcal{S}$ is the set of \textit{states} in the environment,
+    \item $\mathcal{A}$ is the set of \textit{actions} the agent can take,
+    \item $\tau: \mathcal{S} \times \mathcal{A} \rightarrow \mathcal{S}$ (\textbf{guaranteed by the Markov property}) 
+          is the \textit{transition function}
+          that maps a state and an action to the next state,
+    \item $r: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \rightarrow \mathbb{R}$ is the \textit{reward function} 
+          that maps a state, action, and next-state tuple to a real-valued reward, and
+    \item $\gamma \in [0, 1]$ is (an optional) \textit{discount factor} determining 
+          how "important" future rewards are compared to immediate rewards.
+\end{itemize}
+
+Typically, an agent interacts with the environment in an \textit{episodic} manner, 
+where it:
+
+\begin{itemize}
+    \item starts in an initial state $s_0 \sim \rho_0$ (where $\rho_0$ is the initial state distribution),
+    \item takes an action $a_t \in \mathcal{A}$,
+    \item receives a next state $s_{t+1} \sim \tau(s_t, a_t)$,
+    \item repeats the above until it reaches a terminal state $s_n \in \mathcal{S}$, whereupon the episode concludes.
+\end{itemize}
+This sequence of interactions $T = ((s_0, a_0), (s_1, a_1), \ldots, (s_n, a_n))$
+is termed a \textit{trajectory}, and it should be regarded analogously to one
+of many games of Tic-Tac-Toe, or a single playthrough of a video game.
+
+Rehashing what was mentioned earlier, the goal of the agent is to learn an optimal policy 
+$\pi^{*}: \mathcal{S} \rightarrow \mathcal{A}$ which allows it to \textit{maximize the cumulative reward}
+it receives across all possible trajectories.
+Formally:
+\begin{equation}
+    \begin{array}{rll}
+        \pi^{*} & = {\displaystyle \arg\max_{\pi} \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} \gamma^t r(s_t, a_t, s_{t+1}) \right]} 
+                & \\
+                & = {\displaystyle \arg\max_{\pi} \underset{T \sim \pi}{\mathbb{E}} \left[ \sum_{t=0}^{n} \gamma^t r(s_t, a_t) \right] } 
+                & {\displaystyle \left(r(s_t, a_t) = \underset{s_{t + 1} \sim \tau(s_t, a_t)}{\mathbb{E}}[r(s_t, a_t, s_{t + 1})]\right) } \\
+    \end{array}
+\end{equation}
+
+\bibliographystyle{../colm2025_conference}
+\bibliography{wk12}
+\appendix
+
+\end{document}
