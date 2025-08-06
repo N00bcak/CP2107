@@ -95,6 +95,11 @@ of what is possible with deep learning in general.
 % they may fall short.
 
 \section{Background}
+
+The following informally summarize the key concepts necessary to understand
+RLVR. More details can be found in the Appendices (where applicable)
+as well as in previous weeks' works.
+
 \subsection{LLMs}
 As their name partly suggests, LLMs are a class of neural networks 
 which attempt to learn the statistical distribution of natural language
@@ -119,15 +124,6 @@ to learn general language patterns and structures.
 This stage is typically \textit{self-supervised} in that the corpus
 provides both the conditioning context and the target output, eliding
 the need for human-curated labels.
-
-Where $\theta^{*}$ are the model parameters and $N$ is the model's context length, 
-an optimal language model $LM_{(\theta^{*}, N)}$
-maximizes the likelihood of the next token given all previous tokens, across all training examples
-$\left\{\{x_{j + i}\}_{i = 0}^{N - 1}\right\}_{j = 1}^{M - N}$ 
-in a corpus of size $M$:
-\begin{equation} \label{eq:pretrain-obj}
-    \theta^{*} = \underset{\theta}{\arg\min} \sum_{j = 1}^{M - N} \left[\sum_{i = 0}^{N - 1} -\log P_{\theta}(x_{j + i} | x_j, \cdots, x_{< (j + i)})\right]
-\end{equation}
 
 Next, some LLMs (\cite{InstructGPT-2022}) undergo \textit{supervised fine-tuning} on more specialized corpora to adapt 
 their capabilities to specific tasks or domains (\cite{radford-et-al-2019,Brown-et-al-2020}).
@@ -186,11 +182,6 @@ The agent thus induces a sequence of interactions $T = (s_0, a_0, s_1, a_1, \ldo
 (a \textit{trajectory}), which should be regarded analogously to one
 of many games of Tic-Tac-Toe, or a single playthrough of a video game.
 
-Formally, we can write the optimal policy $\pi_{\theta^{*}}$ as the one that maximizes the \textit{expected cumulative reward} (\cite{wk2}):
-\begin{equation} \label{eq:rl-obj}
-    \pi_{\theta^{*}} = {\displaystyle \arg\max_{\pi_\theta} \underset{T \sim \pi_{\theta}}{\mathbb{E}} \left[ \sum_{t=0}^{n} \gamma^t r(s_t, a_t) \right] }
-\end{equation}
-
 \subsubsection{Policy Gradient Methods}
 Where RLVR is concerned, we are primarily interested in \textit{policy gradient methods} (\cite{wk2, SpinningUp-2018, Weng-2018}),
 whose direct optimization on the RL objective in Equation \eqref{eq:rl-obj} is \textbf{uses the
@@ -199,25 +190,9 @@ observation that the expected cumulative reward is differentiable with respect t
 This gives rise to a simple gradient ascent algorithm (\cite{wk2}) which a wide variety of algorithms like
 REINFORCE (\cite{Williams-1992}),
 Proximal Policy Optimization (PPO) (\cite{ppo}),
-and Group Relative Policy Optimization (GRPO) (\cite{grpo}) are ultimately based on:
+and Group Relative Policy Optimization (GRPO) (\cite{grpo}) are ultimately based on,
+the details of which we relegate to 
 
-\begin{algorithm}[H]
-    \caption{Improved Policy Gradient Algorithm}
-    \label{alg:reinforce}
-    \begin{algorithmic}[1]
-        \State Input: Policy $\pi_\theta$, learning rate $\alpha$, baseline of choice $b(s_t)$
-        \State Output: Updated policy $\pi_\theta$
-        \While{not converged}
-            \State Sample a batch of trajectories $T$ from the policy $\pi_\theta$
-            \For{each trajectory $T$ in the batch}
-                \State Compute the rewards-to-go $R_t$ for each time step $t$ in the trajectory
-                \State Compute the baseline $b(s_t)$ for each time step $t$ in the trajectory
-                \State Estimate $\nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \left(\sum_{t = 0}^{n} R_t - b(s_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$
-            \EndFor
-            \State $\theta \leftarrow \theta + \alpha \nabla_\theta J(\pi_\theta)$
-        \EndWhile
-    \end{algorithmic}
-\end{algorithm}
 
 \subsubsection{Case Study: REINFORCE}
 In \cite{wk3}, we experimented with a simple RL training pipeline by 
@@ -256,5 +231,44 @@ and $\pi_{\theta_{old}}$ is the policy network from the previous GRPO step.
 \bibliographystyle{../colm2025_conference}
 \bibliography{wk12}
 \appendix
+\section{Objective Functions}
+\subsection{LLM Pre-training Objective}
+
+Where $\theta^{*}$ are the model parameters and $N$ is the model's context length, 
+an optimal language model $LM_{(\theta^{*}, N)}$
+maximizes the likelihood of the next token given all previous tokens, across all training examples
+$\left\{\{x_{j + i}\}_{i = 0}^{N - 1}\right\}_{j = 1}^{M - N}$ 
+in a corpus of size $M$:
+\begin{equation} \label{eq:pretrain-obj}
+    \theta^{*} = \underset{\theta}{\arg\min} \sum_{j = 1}^{M - N} \left[\sum_{i = 0}^{N - 1} -\log P_{\theta}(x_{j + i} | x_j, \cdots, x_{< (j + i)})\right]
+\end{equation}
+
+\subsection{General RL Objective}
+Formally, we can write the optimal policy $\pi_{\theta^{*}}$ as the one that maximizes the \textit{expected cumulative reward} (\cite{wk2}):
+\begin{equation} \label{eq:rl-obj}
+    \pi_{\theta^{*}} = {\displaystyle \arg\max_{\pi_\theta} \underset{T \sim \pi_{\theta}}{\mathbb{E}} \left[ \sum_{t=0}^{n} \gamma^t r(s_t, a_t) \right] }
+\end{equation}
+
+\subsection{RLVR Objective}
+
+\section{Policy Gradient Algorithm}
+
+\begin{algorithm}[H]
+    \caption{Improved Policy Gradient Algorithm}
+    \label{alg:reinforce}
+    \begin{algorithmic}[1]
+        \State Input: Policy $\pi_\theta$, learning rate $\alpha$, baseline of choice $b(s_t)$
+        \State Output: Updated policy $\pi_\theta$
+        \While{not converged}
+            \State Sample a batch of trajectories $T$ from the policy $\pi_\theta$
+            \For{each trajectory $T$ in the batch}
+                \State Compute the rewards-to-go $R_t$ for each time step $t$ in the trajectory
+                \State Compute the baseline $b(s_t)$ for each time step $t$ in the trajectory
+                \State Estimate $\nabla_\theta J(\pi_\theta) \approx \frac{1}{m} \left(\sum_{t = 0}^{n} R_t - b(s_t)\right) \left( \sum_{t=0}^{n} \nabla_\theta \log(\pi_\theta(a_t | s_t)) \right)$
+            \EndFor
+            \State $\theta \leftarrow \theta + \alpha \nabla_\theta J(\pi_\theta)$
+        \EndWhile
+    \end{algorithmic}
+\end{algorithm}
 
 \end{document}
