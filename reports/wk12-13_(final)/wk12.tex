@@ -120,38 +120,24 @@ Per \cite{Karpathy-2025}, LLMs typically undergo multiple stages of training,
 developing different capabilities at each stage.
 
 Firstly, during \textit{pre-training}, LLMs are trained on a large corpus of text data
-to learn general language patterns and structures.
+to learn general language patterns and structures by optimizing the objective in Equation \eqref{eq:pretrain-obj}.
 This stage is typically \textit{self-supervised} in that the corpus
 provides both the conditioning context and the target output, eliding
-the need for human-curated labels.
+the need for human-curated labels. See Appendix \ref{sec:cs-nanogpt} and (\cite{wk8})
+for an experiment on pre-training a small LLM on the TinyShakespeare corpus (\cite{tinyss, tinyss2}).
 
 Next, some LLMs (\cite{InstructGPT-2022}) undergo \textit{supervised fine-tuning} on more specialized corpora to adapt 
 their capabilities to specific tasks or domains (\cite{radford-et-al-2019,Brown-et-al-2020}).
 While the objective is identical to Equation \eqref{eq:pretrain-obj} (\cite{wk5}),
-the corpus \textit{consists of human-annotated examples} and \textit{does not consider the log-likelihoods of the prompt tokens}.
+the corpus \textit{consists of human-annotated examples} and 
+the objective \textit{does not consider the log-likelihoods of the prompt tokens} (
+    since strictly speaking, the prompt tokens are not part of the target output
+).
 
 Finally, most modern LLMs (\cite{tulu3, r1}) undergo \textit{reinforcement learning post-training},
 such as RL with Human Feedback (RLHF) (\cite{Christiano-et-al-2017, InstructGPT-2022})
 or RLVR (\cite{tulu3, grpo, r1}) to refine their output quality and alignment with human preferences.
-We defer discussion of RLVR to Section \ref{rlvr}, as it is the main focus of this report.
-
-\subsubsection{Case Study: nanoGPT}
-In \cite{wk8}, experiments in pre-training a small LLM on the TinyShakespeare corpus (\cite{tinyss, tinyss2}) were
-conducted with nanoGPT (\cite{nanoGPT}). While the details of the experiment can be found in \cite{wk8},
-we summarize the key findings here:
-\begin{figure}
-    \centering
-    \includegraphics[width=0.45\textwidth, height=0.15\textheight]{images/gpt_arch.png}
-    \includegraphics[width=0.45\textwidth, height=0.15\textheight]{images/loss_curves.png}
-    \caption{(Left) The architecture of nanoGPT, illustrated. (Right) The training loss curves of the pre-trained nanoGPT model.}
-    \label{fig:nanoGPT-sample}
-\end{figure}
-\begin{itemize}
-    \item Despite being tokenized on a character level, the model could generate valid whole words
-         with few to no errors.
-    \item The model could generate text that (superficially) resembled the training corpus.
-    \item The model often produced nonsensical text.
-\end{itemize}
+We defer discussion of RLVR to Section \ref{sec:rlvr}, as it is the main focus of this report.
 
 \subsection{RL}
 
@@ -160,6 +146,7 @@ where an agent learns to make a sequence of \textit{actions} or \textit{decision
 in an \textit{environment} in order to maximize an \textit{objective} defined by a cumulative reward signal (\cite{Sutton-and-Barto-1998}).
 
 \subsubsection{RL Problems as Markov Decision Processes (MDPs)}
+A formal treatment of the following paragraph is given in Appendix \ref{sec:rl-obj}.
 
 Most commonly, RL problems are formulated as MDPs
 by \textit{assuming the Markov property}, where environment dynamics
@@ -167,20 +154,12 @@ only depend on the current state and action
 (\cite{SpinningUp-2018, Levine-et-al-2023, Sutton-and-Barto-1998}). This \textit{Markov assumption} is \textbf{key} to 
 enabling the theoretical performance guarantees of many RL algorithms (\cite{Sutton-and-Barto-1998}).
 
-Formally speaking, an MDP is defined as a tuple $(\mathcal{S}, \mathcal{A}, \tau, r, \gamma)$, 
-where $\mathcal{S}$ is the set of \textit{states} in the environment, 
-$\mathcal{A}$ is the set of \textit{actions} the agent can take,
-$\tau: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \rightarrow [0, 1]$ is the \textit{transition function},
-$r: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \rightarrow \mathbb{R}$ is the \textit{reward function}, and 
-$\gamma \in [0, 1]$ is (an optional) \textit{discount factor}.
+Typically, an agent interacts with the environment via a \textit{parameterized, stochastic} policy
+to collect experiences known as \textit{trajectories} or \textit{episodes} (Citations please).
+The agent then uses these trajectories to update its policy parameters
+in a way that maximizes the expected cumulative reward
+(\cite{Sutton-and-Barto-1998, SpinningUp-2018, Levine-et-al-2023}).
 
-Typically, an agent interacts with the environment 
-via a \textit{parameterized, stochastic} policy $\pi_\theta: \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]$,
-in an \textit{episodic} manner, where $s_0 \sim \rho_0$ (the initial state distribution),
-and $\forall_{0 \leq k < n}\left(a_{k} \sim \pi_\theta(s_k), s_{k+1} \sim \tau(s_k, a_{k})\right)$ (\cite{wk1}). 
-The agent thus induces a sequence of interactions $T = (s_0, a_0, s_1, a_1, \ldots, s_n)$
-(a \textit{trajectory}), which should be regarded analogously to one
-of many games of Tic-Tac-Toe, or a single playthrough of a video game.
 
 \subsubsection{Policy Gradient Methods}
 Where RLVR is concerned, we are primarily interested in \textit{policy gradient methods} (\cite{wk2, SpinningUp-2018, Weng-2018}),
@@ -191,13 +170,8 @@ This gives rise to a simple gradient ascent algorithm (\cite{wk2}) which a wide 
 REINFORCE (\cite{Williams-1992}),
 Proximal Policy Optimization (PPO) (\cite{ppo}),
 and Group Relative Policy Optimization (GRPO) (\cite{grpo}) are ultimately based on,
-the details of which we relegate to 
+the details of which we relegate to Algorithm \ref{alg:reinforce} in Appendix \ref{sec:alg-reinforce}.
 
-
-\subsubsection{Case Study: REINFORCE}
-In \cite{wk3}, we experimented with a simple RL training pipeline by 
-\cite{Levine-et-al-2023} to train a simple network on the CartPole environment (\cite{Towers-et-al-2024}).
- 
 
 \subsubsection{Special Mention: GRPO}
 Most relevant to modern RLVR methods is the Group Relative Policy Optimization (GRPO) algorithm (\cite{grpo}).
@@ -205,28 +179,15 @@ It is best described as a \textit{computationally-motivated variant} of PPO (\ci
 a neural network baseline, which allows it to optimize LLMs on a tight memory budget, and has
 been shown to be effective in training LLMs with RLVR (\cite{grpo, r1}).
 
-For the sake of formalism, we re-state the GRPO objective (\cite{grpo, wk10}). 
-Consider a policy network $\pi_\theta$ and critic network $V_\phi$ in a single-state,
-single-action armed bandit environment (\cite{Sutton-and-Barto-1998, contextualbandit}) 
-with state $s$ and action $a = (o_1, \dots, o_n)$,
-where $o_k$ is the $k$-th output token of the language model.
-Then the GRPO objective is defined as follows:
-\begin{equation}
-    \label{eq:grpo-obj}
-    \begin{array}{rl}
-        \mathcal{J}(\theta) &= \mathbb{E}_{(s, o_1, \dots, o_n) \sim \pi_\theta} \left[ 
-            \displaystyle
-            \frac{1}{n} \sum_{k = 1}^n \min \left\{
-                \frac{\pi_\theta(o_k|s, o_{< k})}{\pi_{\theta_{old}}(o_k|s, o_{< k})} A(s, a),
-                g(s, a)
-            \right\}
-        \right] {\displaystyle - \lambda D_{KL}(\pi_\theta || \pi_{\theta_{old}})} \\
-    \end{array}
-\end{equation}
-where ${\displaystyle g(s, a) = clip\left(\frac{\pi_\theta(o_k|s, o_{< k})}{\pi_{\theta_{old}}(o_k|s, o_{< k})}, 1 - \epsilon, 1 + \epsilon \right) A(s, a)}$,
-and $\pi_{\theta_{old}}$ is the policy network from the previous GRPO step.
+A summary of the GRPO Objective may be found in Appendix \ref{sec:grpo-obj}.
 
+\section{Introducing RLVR} \label{sec:rlvr}
 
+\section{Experiments}
+\section{Results}
+\section{Discussion}
+
+\section{Conclusion}
 
 \bibliographystyle{../colm2025_conference}
 \bibliography{wk12}
@@ -244,16 +205,84 @@ in a corpus of size $M$:
 \end{equation}
 
 \subsection{General RL Objective}
-Formally, we can write the optimal policy $\pi_{\theta^{*}}$ as the one that maximizes the \textit{expected cumulative reward} (\cite{wk2}):
+\label{sec:rl-obj}
+
+Formally speaking, an MDP is defined as a tuple $(\mathcal{S}, \mathcal{A}, \tau, r, \gamma)$, 
+where $\mathcal{S}$ is the set of \textit{states} in the environment, 
+$\mathcal{A}$ is the set of \textit{actions} the agent can take,
+$\tau: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \rightarrow [0, 1]$ is the \textit{transition function},
+$r: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \rightarrow \mathbb{R}$ is the \textit{reward function}, and 
+$\gamma \in [0, 1]$ is (an optional) \textit{discount factor}.
+
+
+Typically, an agent interacts with the environment 
+via a \textit{parameterized, stochastic} policy $\pi_\theta: \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]$,
+in an \textit{episodic} manner, where $s_0 \sim \rho_0$ (the initial state distribution),
+and $\forall_{0 \leq k < n}\left(a_{k} \sim \pi_\theta(s_k), s_{k+1} \sim \tau(s_k, a_{k})\right)$ (\cite{wk1}). 
+The agent thus induces a sequence of interactions $T = (s_0, a_0, s_1, a_1, \ldots, s_n)$
+(a \textit{trajectory}), which should be regarded analogously to one
+of many games of Tic-Tac-Toe, or a single playthrough of a video game.
+
+Simply put, the optimal policy $\pi_{\theta^{*}}$ is the one that maximizes the \textit{expected cumulative reward} (\cite{wk2}):
 \begin{equation} \label{eq:rl-obj}
     \pi_{\theta^{*}} = {\displaystyle \arg\max_{\pi_\theta} \underset{T \sim \pi_{\theta}}{\mathbb{E}} \left[ \sum_{t=0}^{n} \gamma^t r(s_t, a_t) \right] }
 \end{equation}
 
+\subsection{GRPO Objective}
+\label{sec:grpo-obj}
+
+Consider a policy network $\pi_\theta$ and critic network $V_\phi$ in a single-state,
+single-action armed bandit environment (\cite{Sutton-and-Barto-1998, contextualbandit}) 
+with state $s$ and action $a = (o_1, \dots, o_n)$,
+where $o_k$ is the $k$-th output token of the language model.
+Then the GRPO objective is defined as follows (\cite{grpo, wk10}):
+\begin{equation}
+    \label{eq:grpo-obj}
+    \begin{array}{rl}
+        \mathcal{J}(\theta) &= \mathbb{E}_{(s, o_1, \dots, o_n) \sim \pi_\theta} \left[ 
+            \displaystyle
+            \frac{1}{n} \sum_{k = 1}^n \min \left\{
+                \frac{\pi_\theta(o_k|s, o_{< k})}{\pi_{\theta_{old}}(o_k|s, o_{< k})} A(s, a),
+                g(s, a)
+            \right\}
+        \right] {\displaystyle - \lambda D_{KL}(\pi_\theta || \pi_{\theta_{old}})} \\
+    \end{array}
+\end{equation}
+where ${\displaystyle g(s, a) = clip\left(\frac{\pi_\theta(o_k|s, o_{< k})}{\pi_{\theta_{old}}(o_k|s, o_{< k})}, 1 - \epsilon, 1 + \epsilon \right) A(s, a)}$,
+and $\pi_{\theta_{old}}$ is the policy network from the previous GRPO step.
+
+
 \subsection{RLVR Objective}
 
-\section{Policy Gradient Algorithm}
+\section{Miscellaneous Case Studies}
 
-\begin{algorithm}[H]
+\subsubsection{Case Study: REINFORCE} \label{sec:cs-reinforce}
+In \cite{wk3}, we experimented with a simple RL training pipeline by 
+\cite{Levine-et-al-2023} to train a simple network on the CartPole environment (\cite{Towers-et-al-2024}).
+ 
+\subsection{Case Study: nanoGPT} \label{sec:cs-nanogpt}
+In \cite{wk8}, experiments in pre-training a small LLM on the TinyShakespeare corpus (\cite{tinyss, tinyss2}) were
+conducted with nanoGPT (\cite{nanoGPT}). While the details of the experiment can be found in \cite{wk8},
+we summarize the key findings here:
+\begin{figure}
+    \centering
+    \includegraphics[width=0.45\textwidth, height=0.15\textheight]{images/gpt_arch.png}
+    \includegraphics[width=0.45\textwidth, height=0.15\textheight]{images/loss_curves.png}
+    \caption{(Left) The architecture of nanoGPT, illustrated. (Right) The training loss curves of the pre-trained nanoGPT model.}
+    \label{fig:nanoGPT-sample}
+\end{figure}
+\begin{itemize}
+    \item Despite being tokenized on a character level, the model could generate valid whole words
+         with few to no errors.
+    \item The model could generate text that (superficially) resembled the training corpus.
+    \item The model often produced nonsensical text.
+\end{itemize}
+
+
+\section{Policy Gradient Algorithm}
+\label{sec:alg-reinforce}
+
+\begin{algorithm}[H] 
     \caption{Improved Policy Gradient Algorithm}
     \label{alg:reinforce}
     \begin{algorithmic}[1]
