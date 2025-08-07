@@ -29,7 +29,7 @@
 \hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
 
 
-\title{Week 12: Final Summary of RLVR}
+\title{Odyssey Final Report - RLVR For Reasoning LLMs}
 
 \author{\textbf{BEH} Chuen Yang}
 
@@ -59,9 +59,10 @@
 
 \begin{abstract}
     This final report summarizes the work done throughout the past weeks on Reinforcement Learning (RL), Large Language Models (LLMs),
-    and RL with Verifiable Rewards (RLVR) in LLMs.
-    Leaving the intermediate work aside, this report presents most of the key results and findings from all weeks of the project.
-    We hope the report serves as a good roadmap for understanding RLVR and how it can be implemented in LLMs.
+    and RL with Verifiable Rewards (RLVR) in LLMs, culminating in a report detailing
+    how RLVR can be used to train LLMs to perform reasoning tasks.
+    This report presents most of the key results and findings from all weeks of the project, and it is hoped
+    that the report serves as a good roadmap for understanding RLVR's potential to elicit reasoning capabilities in LLMs.
 \end{abstract}
 
 \section{Introduction}
@@ -70,33 +71,13 @@ in the Natural Language Processing (NLP) domain, ranging from text generation,
 sentiment analysis, to machine translation, question answering (\cite{Brown-et-al-2020}),
 and in recent years, even complex reasoning tasks (\cite{tulu3, grpo, r1}).
 
-% It goes without saying, then, that being able to peer behind the curtain of such a powerful
-% and apparently generalized model will be a fascinating endeavor. 
-By gaining a deeper
-% and more minute 
-understanding of how LLMs work, what they are capable of,
-and what their limitations are, we will be able to harness their power
-in more suitable and effective ways, and even expand the boundaries 
-of what is possible with deep learning in general.
-
-% In this brief paper, we present an executive summary of the prerequisite background
-% in Reinforcement Learning (RL) and LLMs, highlighting key concepts and findings from our work \footnote{
-%     These works will not be cited in-line for brevity,
-%     but can be found in the references section at the end of this report.
-%     The reader should keep in mind that the previous works serve as the foundation
-%     for the current report, and can be referenced for more in-depth treatments
-%     of their respective topics.
-% },
-% and progressively \textit{build up to a high-level overview of RL with Verifiable Rewards (RLVR) in LLMs},
-% which is the main focus of this report.
-% We supplement our descriptions and theorywork with experimental results
-% from past weeks, in order to scaffold a more comprehensive understanding
-% of how RL, LLM training, and RLVR work in practice, as well as how and where
-% they may fall short.
+By gaining deeper insights and practical experience in training LLMs with RLVR,
+one can become better equipped to understand why LLMs are capable of reasoning,
+how they fall short, and to what extent RLVR can be used to improve their reasoning capabilities.
 
 \section{Background}
 
-The following informally summarize the key concepts necessary to understand
+This section informally summarizes the key concepts for understanding
 RLVR. More details can be found in the Appendices (where applicable)
 as well as in previous weeks' works.
 
@@ -123,9 +104,10 @@ Firstly, during \textit{pre-training}, LLMs are trained on a large corpus of tex
 to learn general language patterns and structures by optimizing the objective in Equation \eqref{eq:pretrain-obj}.
 This stage is typically \textit{self-supervised} in that the corpus
 provides both the conditioning context and the target output, eliding
-the need for human-curated labels. See Appendix \ref{sec:cs-nanogpt} and (\cite{wk8})
-for an experiment on pre-training a small LLM on the TinyShakespeare corpus (\cite{tinyss, tinyss2}).
-
+the need for human-curated labels. \footnote{
+    See Appendix \ref{sec:cs-nanogpt} and (\cite{wk8})
+    for an experiment on pre-training a small LLM on the TinyShakespeare corpus (\cite{tinyss, tinyss2}).
+}
 Next, some LLMs (\cite{InstructGPT-2022}) undergo \textit{supervised fine-tuning} on more specialized corpora to adapt 
 their capabilities to specific tasks or domains (\cite{radford-et-al-2019,Brown-et-al-2020}).
 While the objective is identical to Equation \eqref{eq:pretrain-obj} (\cite{wk5}),
@@ -142,24 +124,23 @@ We defer discussion of RLVR to Section \ref{sec:rlvr}, as it is the main focus o
 \subsection{RL}
 
 In the general case, RL is a machine learning paradigm
-where an agent learns to make a sequence of \textit{actions} or \textit{decisions} 
-in an \textit{environment} in order to maximize an \textit{objective} defined by a cumulative reward signal (\cite{Sutton-and-Barto-1998}).
+where an agent learns to take a sequence of \textit{actions} 
+in an \textit{environment} so as to to maximize cumulative reward (\cite{Sutton-and-Barto-1998}).
 
 \subsubsection{RL Problems as Markov Decision Processes (MDPs)}
-A formal treatment of the following paragraph is given in Appendix \ref{sec:rl-obj}.
-
 Most commonly, RL problems are formulated as MDPs
 by \textit{assuming the Markov property}, where environment dynamics
 only depend on the current state and action
-(\cite{SpinningUp-2018, Levine-et-al-2023, Sutton-and-Barto-1998}). This \textit{Markov assumption} is \textbf{key} to 
+(\cite{SpinningUp-2018, Levine-et-al-2023, Sutton-and-Barto-1998}) \footnote{
+    A formal treatment of the following paragraph is given in Appendix \ref{sec:rl-obj}.
+} This \textit{Markov assumption} is \textbf{key} to 
 enabling the theoretical performance guarantees of many RL algorithms (\cite{Sutton-and-Barto-1998}).
 
 Typically, an agent interacts with the environment via a \textit{parameterized, stochastic} policy
-to collect experiences known as \textit{trajectories} or \textit{episodes} (Citations please).
+to collect experiences known as \textit{trajectories} or \textit{episodes}.
 The agent then uses these trajectories to update its policy parameters
 in a way that maximizes the expected cumulative reward
 (\cite{Sutton-and-Barto-1998, SpinningUp-2018, Levine-et-al-2023}).
-
 
 \subsubsection{Policy Gradient Methods}
 Where RLVR is concerned, we are primarily interested in \textit{policy gradient methods} (\cite{wk2, SpinningUp-2018, Weng-2018}),
@@ -172,22 +153,153 @@ Proximal Policy Optimization (PPO) (\cite{ppo}),
 and Group Relative Policy Optimization (GRPO) (\cite{grpo}) are ultimately based on,
 the details of which we relegate to Algorithm \ref{alg:reinforce} in Appendix \ref{sec:alg-reinforce}.
 
-
 \subsubsection{Special Mention: GRPO}
-Most relevant to modern RLVR methods is the Group Relative Policy Optimization (GRPO) algorithm (\cite{grpo}).
+A significant algorithm distinguished for its use in RLVR
+is the Group Relative Policy Optimization (GRPO) algorithm (\cite{grpo}).\footnote{
+    A summary of the GRPO Objective may be found in Appendix \ref{sec:grpo-obj}.
+}
 It is best described as a \textit{computationally-motivated variant} of PPO (\cite{ppo}) without 
 a neural network baseline, which allows it to optimize LLMs on a tight memory budget, and has
 been shown to be effective in training LLMs with RLVR (\cite{grpo, r1}).
 
-A summary of the GRPO Objective may be found in Appendix \ref{sec:grpo-obj}.
+\section{RLVR} \label{sec:rlvr}
 
-\section{Introducing RLVR} \label{sec:rlvr}
+At the intersection of RL and LLMs lies RLVR, which is characterized
+by its use of RL to steer LLMs' outputs towards \textit{verifiably correct} ones,
+according to task-specific criteria.
+(\cite{tulu3, grpo, r1}).
+
+This method is not only very simple to implement and able to extend
+the frontier of LLM capabilities (\cite{tulu3, r1}), but it also 
+escapes many of the usual pitfalls associated with RL on LLMs. For example, models trained on RLHF (\cite{InstructGPT-2022})
+can provide \textit{incorrect, but convincing} answers to questions,
+(\cite{Wen-et-al-2024}), or learn mismatched preferences due to biases mentioned in \cite{pitis-2023}.
+
+Formally speaking, RLVR is typically formulated as a contextual bandit problem (\cite{Sutton-and-Barto-1998, contextualbandit})
+(as with other RL methods on LLMs), where each model output $(o_1, \dots, o_n)$
+denotes a \textit{single action}. A sample objective for RLVR may be obtained 
+by considering Section \ref{sec:rlvr-obj}.
 
 \section{Experiments}
-\section{Results}
-\section{Discussion}
 
-\section{Conclusion}
+Equipped with the requisite background knowledge on RLVR, we can now proceed
+to explore how LLMs can be effectively trained to perform reasoning tasks with
+this technique.
+
+While this section is a partial summary of the work done in \cite{wk10},
+it also contains new experiments and findings contributing to our knowledge
+of reward function design in RLVR.
+
+As in \cite{wk10}, we will be testing small, base language models
+on the GSM8K dataset (\cite{gsm8k}) and evaluating their Pass@1 performance
+on a small subset of holdouts. \textbf{However, we will also be varying the reward function
+in order to \textit{also minimize} the length of models' responses, in addition
+to maximizing the correctness of their answers.}
+
+\subsection{GSM8K Dataset}
+
+GSM8K (\cite{gsm8k}) is a grade school level math problem dataset consisting
+of 8,792 word problems. All demand a single integer as the answer, and all
+were deliberately designed to be solvable by elementary school students.
+
+Due to the natural language format, this task is difficult to solve algorithmically.
+Instead, it concurrently assesses models' ability to parse diverse problem statements, 
+reason about numbers, and perform arithmetic operations accurately (\cite{gsm8k}).
+
+\subsection{Experimental Configurations}
+
+For all experiments, we relied on an adapted version of the nano-aha-moment repository (\cite{nano-aha-moment}),
+which provides a faithful single-file implementation of the GRPO algorithm (\cite{grpo})
+and a simple training pipeline for arbitrary LLMs on arbitrary datasets (as long
+as they are supported by HuggingFace Transformers (\cite{hf-transformers})) (\cite{wk10}).
+
+Training was alternately conducted on a single NVIDIA 4090 GPU with 48GB of VRAM,
+and a single NVIDIA 3090 GPU with 24GB of VRAM \footnote{
+    Thanks Chann.
+}. All runs took a combined $\sim$ 40 hours of wall-clock time to complete.
+As in \cite{wk10}, we only performed one trial for each reward function 
+due to compute restrictions.
+
+\subsection{Reward Modelling}
+
+Owing to its central role as an independent variable in our experiment,
+we go into further detail on the design of the reward function in \cite{wk10}.
+
+In \cite{wk10}, our reward function is a variant of \cite{nano-aha-moment}'s, 
+and it is a more permissive variant of that
+described by \cite{r1}:
+\begin{equation} \label{eq:control-reward-fn}
+    \begin{array}{rl}
+        R(s, a) &= C(s, a) + F(s, a) \\
+        & =\begin{cases}
+            1 & \text{if } a \text{ contains the correct answer} \\
+            0 & \text{otherwise}
+        \end{cases} \\
+        & + \begin{cases}
+            1 & \text{if } a \text{ contains thinking, $\backslash n$, and a single integer answer.} \\
+            0.5 & \text{if } a \text{ contains thinking, $\backslash n$, and any answer.} \\
+            0 & \text{otherwise}
+        \end{cases}
+    \end{array}
+\end{equation}
+
+We speculate the additional half-reward clause encourages the model to produce
+valid answers even if they do not obey the strict response format (\cite{wk10}).
+
+\subsection{Hyperparameters}
+
+The numerical hyperparameters used in our experiments were identical to those used in \cite{wk10}.
+For more details, please refer to Table \ref{tab:universal-hyperparams}.
+
+In attempting to minimize the length of the model's responses,
+we also considered the following reward functions (the default reward function from \cite{wk10} 
+is also included for comparison):
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|p{0.2\textwidth}|p{0.6\textwidth}|p{0.3\textwidth}|}
+        \hline
+        \textbf{Reward Function} & \textbf{Description} & \textbf{Function Name} \\
+        \hline
+        Control (\cite{wk10}) 
+        & $r(s, a) = R(s, a)$ (Equation \ref{eq:control-reward-fn})
+        & \texttt{noop\_decay}
+        \\ \hline
+        Linear Penalty 
+        & $$r(s, a) = \left(1 - 0.5 clip\left(\frac{len(a)}{L}, 1\right)\right) R(s, a)$$
+        & \texttt{linear\_length\_decay}
+        \\ \hline 
+        Quadratic Penalty
+        & $$r(s, a) = \left(1 - 0.5 clip\left(\left(\frac{len(a)}{L}\right)^2, 1\right)\right) R(s, a)$$ 
+        & \texttt{quadratic\_length\_decay}
+        \\ \hline
+        Batch Exponential Moving Average Penalty
+        & $$r(s, a) = \beta R(s, a)$$ 
+        \newline
+        $\beta = \begin{cases}
+            1.2 & \text{if } a < \texttt{avg\_response\_length} - 10 \\
+            0.8 & \text{if } a > \texttt{avg\_response\_length} + 10 \\
+            1.0 & \text{otherwise}
+        \end{cases}$
+        & \texttt{batch\_exp\_avg\_decay}
+        \\ \hline
+        ShorterBetter (\cite{ShorterBetter})
+        & $$r(s, a) = R(s, a) - 0.0005 |len(a) - l_{SOL}|$$
+        \newline
+        $l_{SOL} = \begin{cases}
+            min(len(a_1), \dots, len(a_n)) & \text{if any } a_i \text{ is correct} \\
+            \frac{1}{n}\sum_{i = 1}^{n} len(a_i) & \text{otherwise}
+        \end{cases}$
+        & None (See \texttt{nano\_r1\_gsm8k} \newline \texttt{\_shorterbetter.py})
+        \\ \hline
+    \end{tabular}
+    \caption{Reward Functions used in our experiments.}
+    \label{tab:reward-functions}
+\end{table}
+\section{Results}
+\subsection{Pass@1 Performance}
+
+
+\section{Discussion}
 
 \bibliographystyle{../colm2025_conference}
 \bibliography{wk12}
@@ -251,8 +363,11 @@ Then the GRPO objective is defined as follows (\cite{grpo, wk10}):
 where ${\displaystyle g(s, a) = clip\left(\frac{\pi_\theta(o_k|s, o_{< k})}{\pi_{\theta_{old}}(o_k|s, o_{< k})}, 1 - \epsilon, 1 + \epsilon \right) A(s, a)}$,
 and $\pi_{\theta_{old}}$ is the policy network from the previous GRPO step.
 
-
 \subsection{RLVR Objective}
+\label{sec:rlvr-obj}
+
+GRPO (\cite{grpo}) has historically been the algorithm of choice for RLVR (\cite{r1, grpo}),
+hence an objective function for RLVR can simply be \ref{eq:grpo-obj}.
 
 \section{Miscellaneous Case Studies}
 
@@ -299,5 +414,37 @@ we summarize the key findings here:
         \EndWhile
     \end{algorithmic}
 \end{algorithm}
+
+\section{Numerical Hyperparameters}
+
+As in \cite{wk10}, we used the following hyperparameters for all runs of the GSM8K task:
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Hyperparameter} & \textbf{GSM8K} \\
+        \hline
+        Model Family & Qwen2.5 (\cite{Qwen-et-al-2025}) \\
+        \hline
+        Model Scale & 1.5B \\
+        \hline
+        Batch Size & 16 \\
+        \hline
+        Learning Rate & 1e-6 \\
+        \hline
+        Max. Response Length ($L$) & 512 \\
+        \hline
+        Completions per Task & 8 \\
+        \hline
+        Episodes per GRPO Iteration & 16\\
+        \hline
+        KL Divergence Coefficient $\lambda$ & 0 \\
+        \hline
+        Random Seed & 42 \\
+        \hline
+    \end{tabular}
+    \caption{Universal Hyperparameters across our experiments.}
+    \label{tab:universal-hyperparams}
+\end{table}
 
 \end{document}
